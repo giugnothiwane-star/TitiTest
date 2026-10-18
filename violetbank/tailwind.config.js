@@ -43,6 +43,7 @@ export default {
         shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
         check: { '0%': { strokeDashoffset: '48' }, '100%': { strokeDashoffset: '0' } },
         grow: { '0%': { transform: 'scaleX(0)' }, '100%': { transform: 'scaleX(1)' } },
+        shine: { '0%,55%': { backgroundPosition: '120% 0' }, '100%': { backgroundPosition: '-120% 0' } },
       },
       animation: {
         rise: 'rise .28s cubic-bezier(.2,.8,.2,1) both',
@@ -53,6 +54,7 @@ export default {
         shimmer: 'shimmer 1.4s linear infinite',
         check: 'check .5s .1s ease-out both',
         grow: 'grow .7s cubic-bezier(.2,.8,.2,1) both',
+        shine: 'shine 4.5s ease-in-out infinite',
       },
     },
   },

@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { AccountSelect } from '../components/AccountSelect';
 import { AmountInput } from '../components/AmountInput';
 import { Icon } from '../components/Icon';
+import { cardBackground } from '../components/VirtualCardView';
 import { Button, Callout, Card, Field, KeyValue, PageHeader, SuccessCheck, TextInput } from '../components/ui';
 import { recordExpense } from '../domain/accounts';
 import { getCategory, spendingCategories } from '../domain/categories';
@@ -149,7 +150,7 @@ export default function Purchase() {
                 </button>
                 {cards.map((c) => (
                   <button key={c.id} type="button" onClick={() => setCardId(c.id)} aria-pressed={cardId === c.id} className={clsx('flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-semibold', cardId === c.id ? 'border-brand bg-brand-soft text-brand-ink' : 'border-line')}>
-                    <span className="h-7 w-11 rounded-md" style={{ background: `linear-gradient(135deg, ${c.color}, ${c.accent})` }} />
+                    <span className="h-7 w-11 rounded-md" style={{ background: cardBackground(c) }} />
                     {c.name}
                     {c.locked && <Lock size={13} aria-label="verrouillée" />}
                   </button>

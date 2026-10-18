@@ -4,9 +4,14 @@ import { useState, type CSSProperties, type PointerEvent } from 'react';
 import { demoExpiry } from '../domain/cards';
 import type { VirtualCard } from '../domain/schema';
 import { useBank } from '../store/bank';
+import logoUrl from '../assets/violetbank-logo.webp';
 import { LogoMark } from './Logo';
 
-function background(card: Pick<VirtualCard, 'color' | 'accent' | 'style'>): string {
+const STARS =
+  'radial-gradient(1.2px 1.2px at 12% 22%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 32% 68%, #fff 50%, transparent 51%), radial-gradient(1.4px 1.4px at 58% 18%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 74% 54%, #fff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 88% 84%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 44% 88%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 92% 12%, #fff 50%, transparent 51%)';
+
+/** Fond CSS de la face avant ; réutilisé par les vignettes de carte (accueil, paiement). */
+export function cardBackground(card: Pick<VirtualCard, 'color' | 'accent' | 'style'>): string {
   switch (card.style) {
     case 'aurora':
       return `radial-gradient(120% 120% at 0% 0%, ${card.color} 0%, transparent 55%), radial-gradient(120% 120% at 100% 100%, ${card.accent} 0%, transparent 60%), linear-gradient(135deg, #2a1f63, #0b1a2e)`;
@@ -14,10 +19,38 @@ function background(card: Pick<VirtualCard, 'color' | 'accent' | 'style'>): stri
       return `linear-gradient(135deg, ${card.color} 0%, #2b2b35 45%, ${card.color} 100%), repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 2px, transparent 2px 4px)`;
     case 'minimal':
       return `linear-gradient(160deg, ${card.color}, ${card.color})`;
+    case 'glass':
+      return `linear-gradient(135deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.06) 60%), radial-gradient(90% 90% at 100% 0%, ${card.accent}cc 0%, transparent 70%), linear-gradient(135deg, ${card.color}d9, ${card.accent}b3)`;
+    case 'holo':
+      return 'linear-gradient(115deg, #ffd1f7 0%, #b7ecff 20%, #c9b8ff 40%, #fff1b8 58%, #a8f0dc 76%, #f1b8ff 100%)';
+    case 'neon':
+      return `radial-gradient(80% 70% at 0% 0%, ${card.color}aa 0%, transparent 60%), radial-gradient(80% 70% at 100% 100%, ${card.accent}aa 0%, transparent 60%), #0b0618`;
+    case 'galaxy':
+      return `${STARS}, radial-gradient(70% 90% at 85% 15%, ${card.accent}aa 0%, transparent 60%), radial-gradient(80% 80% at 5% 95%, ${card.color}bb 0%, transparent 60%), linear-gradient(160deg, #0a0420, #040111)`;
+    case 'royal':
+      return 'radial-gradient(70% 60% at 85% 10%, rgba(232,199,106,.28) 0%, transparent 60%), radial-gradient(90% 80% at 0% 100%, rgba(125,216,255,.22) 0%, transparent 60%), linear-gradient(135deg, #1a0b3d 0%, #3b1a8a 48%, #12062b 100%)';
     default:
       return `linear-gradient(135deg, ${card.color} 0%, ${card.accent} 100%)`;
   }
 }
+
+/** Contour lumineux propre à certains designs premium. */
+function cardRing(card: Pick<VirtualCard, 'color' | 'accent' | 'style'>): string | undefined {
+  switch (card.style) {
+    case 'neon':
+      return `inset 0 0 0 1.5px ${card.color}, inset 0 0 18px ${card.color}88, 0 0 26px ${card.accent}66`;
+    case 'glass':
+      return 'inset 0 0 0 1px rgba(255,255,255,.45)';
+    case 'royal':
+      return 'inset 0 0 0 1.5px #E8C76A, 0 10px 34px rgba(232,199,106,.25)';
+    case 'galaxy':
+      return `inset 0 0 0 1px rgba(255,255,255,.12), 0 10px 34px ${card.accent}44`;
+    default:
+      return undefined;
+  }
+}
+
+const SHINE_STYLES = new Set<VirtualCard['style']>(['holo', 'glass', 'royal', 'metal']);
 
 /** Puce dessinée et symbole sans contact purement décoratifs. */
 function Chip() {
@@ -54,7 +87,7 @@ export function VirtualCardView({ card, flippable = true, className, tilt = true
   const enabled = useBank((s) => s.state.settings.cardAnimations && s.state.settings.animations);
   const [flipped, setFlipped] = useState(false);
   const [rot, setRot] = useState({ x: 0, y: 0 });
-  const light = card.style === 'minimal' && /^#(?:[c-fC-F])/.test(card.color);
+  const light = card.style === 'holo' || (card.style === 'minimal' && /^#(?:[c-fC-F])/.test(card.color));
 
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!enabled || !tilt || e.pointerType !== 'mouse') return;
@@ -82,8 +115,10 @@ export function VirtualCardView({ card, flippable = true, className, tilt = true
         tabIndex={flippable ? 0 : undefined}
         aria-label={flippable ? `Carte ${card.name} : ${flipped ? 'afficher le recto' : 'retourner la carte'}` : undefined}
       >
-        <div className={clsx(face, light ? 'text-[#101014]' : 'text-white')} style={{ background: background(card) }}>
+        <div className={clsx(face, light ? 'text-[#101014]' : 'text-white')} style={{ background: cardBackground(card), boxShadow: cardRing(card) }}>
           <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+          {card.style === 'royal' && <img src={logoUrl} alt="" aria-hidden draggable={false} className="pointer-events-none absolute -bottom-6 -right-4 h-[78%] rotate-[-8deg] rounded-[28%] opacity-30 mix-blend-screen" />}
+          {SHINE_STYLES.has(card.style) && <div aria-hidden className={clsx('card-shine pointer-events-none absolute inset-0', enabled && 'animate-shine')} />}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
               <LogoMark size={28} />

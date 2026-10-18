@@ -240,7 +240,16 @@ test.describe('Profil et code d’accès', () => {
     await page.waitForTimeout(600);
     for (const d of '1357') await lock.getByRole('button', { name: d, exact: true }).click();
     await expect(lock).toBeHidden();
-    await page.getByRole('button', { name: /Orchidée/ }).click();
-    await expect(page.getByText('Formule Orchidée').first()).toBeVisible();
+    // Abonnement fictif payé en argent de démonstration : il débloque les designs premium.
+    await page.getByRole('link', { name: /Essentiel/ }).click();
+    await expect(page).toHaveURL(/\/abonnements$/);
+    await page.getByRole('button', { name: 'Passer à Orchidée' }).click();
+    await page.getByRole('button', { name: /Payer/ }).click();
+    await expect(page.getByText('Abonnement Orchidée activé').first()).toBeVisible();
+    // Navigation interne : un rechargement réafficherait l'écran de code d'accès.
+    await page.getByRole('link', { name: 'Voir mes cartes' }).click();
+    await page.getByRole('button', { name: 'Nouvelle carte' }).click();
+    await expect(page.getByRole('button', { name: 'Design Néon' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Design Royale, réservé/ })).toBeVisible();
   });
 });

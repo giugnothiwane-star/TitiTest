@@ -1,6 +1,6 @@
 import clsx from 'clsx';
 import {
-  Bell, BookOpen, ChartPie, Check, ChevronRight, CircleHelp, Copy, FileClock, HandCoins, History, KeyRound, LayoutGrid, Lock, Pencil, PiggyBank, RotateCcw, Settings, ShieldCheck, Target, Users, type LucideIcon,
+  Bell, BookOpen, ChartPie, Check, ChevronRight, CircleHelp, Copy, Crown, FileClock, HandCoins, History, KeyRound, LayoutGrid, Lock, Pencil, PiggyBank, RotateCcw, Settings, ShieldCheck, Target, Users, type LucideIcon,
 } from 'lucide-react';
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
@@ -9,7 +9,7 @@ import { APP_AUTHOR, APP_VERSION, Credit, LogoMark, Wordmark } from '../componen
 import { PinPad } from '../components/PinPad';
 import { Avatar, Button, Field, Modal, StatTile, Switch, TextArea, TextInput } from '../components/ui';
 import { formatDate } from '../domain/dates';
-import type { Plan } from '../domain/schema';
+import { PLAN_INFO } from '../domain/plans';
 import { dashboardSummary, isActiveLoan } from '../domain/selectors';
 import { achievements, monthSavingsRate } from '../lib/achievements';
 import { createLock, PIN_LENGTH } from '../lib/appLock';
@@ -21,13 +21,6 @@ import { CreditCard, Wallet, TrendingUp } from 'lucide-react';
 
 const AVATARS = ['🦄', '🦊', '🐼', '🐱', '🚀', '🌙', '🎮', '🌸', '💎', '🐙', '🦉', '🍀', '👑', '🔥', '⚡', '🎧'];
 
-/** Formules fictives : uniquement visuelles, sans prix ni avantage réel. */
-export const PLANS: { key: Plan; name: string; desc: string; gradient: string }[] = [
-  { key: 'essentiel', name: 'Essentiel', desc: 'La formule de base de la simulation.', gradient: 'linear-gradient(135deg,#7DD8FF,#7656F6 55%,#4C32B8)' },
-  { key: 'amethyste', name: 'Améthyste', desc: 'Reflets violets profonds.', gradient: 'linear-gradient(135deg,#B06AF2,#5B2BB8)' },
-  { key: 'orchidee', name: 'Orchidée', desc: 'Dégradé rose orchidée.', gradient: 'linear-gradient(135deg,#F07AC0,#7656F6)' },
-  { key: 'nuit', name: 'Nuit violette', desc: 'Noir mat et violet néon.', gradient: 'linear-gradient(135deg,#2B1C6E,#101014)' },
-];
 
 function MenuRow({ to, icon: I, label, hint, badge }: { to: string; icon: LucideIcon; label: string; hint?: string; badge?: number }) {
   return (
@@ -99,7 +92,7 @@ export default function Profile() {
   const unread = state.notifications.filter((n) => !n.read).length;
   const firstTx = state.transactions[state.transactions.length - 1];
   const memberSince = state.profile.joinedAt ?? firstTx?.date ?? null;
-  const plan = PLANS.find((p) => p.key === state.profile.plan) ?? PLANS[0]!;
+  const plan = PLAN_INFO[state.profile.plan];
   const activeLoans = state.loans.filter(isActiveLoan).length;
   const net = summary.available + summary.inVaults - summary.loanOutstanding;
 
@@ -125,10 +118,6 @@ export default function Profile() {
   const startEdit = () => {
     setEditing(true);
     requestAnimationFrame(() => document.getElementById('profil-edition')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  };
-  const setPlan = (key: Plan) => {
-    update((s) => ({ ...s, profile: { ...s.profile, plan: key } }));
-    toast('success', `Formule « ${PLANS.find((p) => p.key === key)?.name} » appliquée`, 'Formule fictive, purement visuelle.');
   };
 
   return (
@@ -189,20 +178,18 @@ export default function Profile() {
           </ul>
         </Widget>
 
-        <Widget title="Formule fictive">
-          <div className="grid grid-cols-2 gap-3">
-            {PLANS.map((p) => {
-              const active = p.key === state.profile.plan;
-              return (
-                <button key={p.key} type="button" onClick={() => setPlan(p.key)} aria-pressed={active} className={clsx('relative overflow-hidden rounded-2xl p-4 text-left text-white transition active:scale-[.98]', active ? 'ring-4 ring-brand/40' : 'opacity-90 hover:opacity-100')} style={{ background: p.gradient }}>
-                  {active && <Check size={18} className="absolute right-3 top-3" aria-label="Formule actuelle" />}
-                  <span className="block font-bold">{p.name}</span>
-                  <span className="mt-1 block text-xs text-white/80">{p.desc}</span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-3 text-xs text-muted">Aucune formule n’a de prix ni d’avantage réel : elles changent seulement l’apparence de votre profil.</p>
+        <Widget title="Abonnement fictif">
+          <Link to="/abonnements" className="flex items-center gap-4 overflow-hidden rounded-2xl p-4 text-white transition active:scale-[.99]" style={{ background: plan.gradient }}>
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20">
+              <Crown size={22} aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-lg font-bold">{plan.name}</span>
+              <span className="block truncate text-sm text-white/80">{plan.price ? `${money(plan.price)} fictifs / mois` : 'Gratuit'} · {plan.tagline}</span>
+            </span>
+            <ChevronRight size={20} aria-hidden />
+          </Link>
+          <p className="mt-3 text-xs text-muted">Payé en argent fictif, un abonnement débloque des designs de carte premium (Holographique, Néon, Galaxie, Royale…).</p>
         </Widget>
 
         <Widget title="Sécurité et confidentialité">

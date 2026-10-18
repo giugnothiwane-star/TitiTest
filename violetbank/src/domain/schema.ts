@@ -30,7 +30,8 @@ export const accountSchema = z.object({
   archived: z.boolean(),
 });
 
-export const cardStyleSchema = z.enum(['gradient', 'aurora', 'metal', 'minimal']);
+// Les styles au-delà de « minimal » sont réservés aux abonnements fictifs (voir plans.ts).
+export const cardStyleSchema = z.enum(['gradient', 'aurora', 'metal', 'minimal', 'glass', 'holo', 'neon', 'galaxy', 'royal']);
 export const cardSchema = z.object({
   id,
   name: shortText(32).min(1),
@@ -66,6 +67,7 @@ export const txTypeSchema = z.enum([
   'loan_fee',
   'reversal',
   'merchant_refund',
+  'plan_fee',
 ]);
 export const txStatusSchema = z.enum(['completed', 'declined']);
 export const transactionSchema = z.object({
@@ -347,6 +349,8 @@ export const profileSchema = z.object({
   bio: shortText(140).default(''),
   plan: planSchema.default('essentiel'),
   joinedAt: localDateTime.nullable().default(null),
+  /** Prochaine échéance de l'abonnement fictif payant (null pour la formule gratuite). */
+  planRenewsOn: isoDate.nullable().default(null),
 });
 
 export const bankStateSchema = z.object({

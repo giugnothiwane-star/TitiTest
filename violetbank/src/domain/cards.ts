@@ -1,6 +1,7 @@
 import { DomainError, fail, guard, ok, requireActiveAccount, sanitizeText, withLog, withNotification, type Ctx, type OpResult } from './core';
 import { randomDigits } from './ids';
 import { formatMoney, MAX_OPERATION_CENTS } from './money';
+import { PLAN_INFO, planAllowsStyle, styleMinPlan } from './plans';
 import type { BankState, CardKind, CardStyle, VirtualCard } from './schema';
 
 export interface CardInput {
@@ -25,7 +26,14 @@ export function makeDemoId(): string {
   return `DEMO ${randomDigits(4)} ${randomDigits(4)}`;
 }
 
-function validate(state: BankState, input: CardInput): CardInput {
+/** Un design premium exige la formule correspondante ; un design déjà porté par la carte reste conservé. */
+function assertStyleAllowed(state: BankState, style: CardStyle, current?: CardStyle): void {
+  if (style === current || planAllowsStyle(state.profile.plan, style)) return;
+  throw new DomainError(`Design réservé à l’abonnement fictif ${PLAN_INFO[styleMinPlan(style)].name}.`);
+}
+
+function validate(state: BankState, input: CardInput, current?: CardStyle): CardInput {
+  assertStyleAllowed(state, input.style, current);
   const name = sanitizeText(input.name, 32);
   if (!name) throw new DomainError('Donnez un nom à la carte.');
   requireActiveAccount(state, input.accountId);
@@ -82,7 +90,7 @@ export function updateCard(state: BankState, ctx: Ctx, cardId: string, patch: Pa
       avatar: patch.avatar !== undefined ? patch.avatar : card.avatar,
       monthlyLimit: patch.monthlyLimit !== undefined ? patch.monthlyLimit : card.monthlyLimit,
       locked: patch.locked ?? card.locked,
-    });
+    }, card.style);
     // La nature d'une carte (standard / jetable) est fixée à la création.
     const updated: VirtualCard = { ...card, ...v, kind: card.kind };
     let next: BankState = { ...state, cards: state.cards.map((c) => (c.id === cardId ? updated : c)) };

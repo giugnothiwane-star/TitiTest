@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import {
+  Crown,
   ArrowDownLeft, ArrowLeftRight, BarChart3, ShoppingCart, Bell, BookOpen, CalendarDays, Calculator, ChartPie, ChevronsLeft, ChevronsRight, ChevronsUpDown, CircleHelp, Coins, CreditCard,
   FileClock, FolderOpen, HandCoins, History, Home, Landmark, Moon, PiggyBank, RotateCcw, Scale, Search, Send, Settings,
   Sun, Target, User, Users, Wallet, X, AlertTriangle, CheckCircle2, Info, XCircle, FlaskConical,
@@ -9,6 +10,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { formatDate } from '../domain/dates';
 import { formatMoney } from '../domain/money';
+import { chargeDuePlanFees } from '../domain/plans';
 import { useResolvedTheme, useToday } from '../lib/hooks';
 import { useBank } from '../store/bank';
 import { useUi } from '../store/ui';
@@ -68,6 +70,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { to: '/notifications', label: 'Notifications', icon: Bell },
       { to: '/profil', label: 'Profil', icon: User },
+      { to: '/abonnements', label: 'Abonnements', icon: Crown },
       { to: '/parametres', label: 'Paramètres', icon: Settings },
       { to: '/journal', label: 'Journal de simulation', icon: FileClock },
       { to: '/aide', label: 'Centre d’aide', icon: CircleHelp },
@@ -461,6 +464,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const theme = useResolvedTheme();
   const animations = useBank((s) => s.state.settings.animations);
   const appName = 'VBanque';
+  const today = useToday();
+  const renewsOn = useBank((s) => s.state.profile.planRenewsOn);
+  useEffect(() => {
+    // Prélèvement des mensualités d'abonnement échues (ouverture de l'appli, passage de date ou horloge simulée).
+    if (!renewsOn || renewsOn > today) return;
+    const { state, ctx, replace } = useBank.getState();
+    const next = chargeDuePlanFees(state, ctx());
+    if (next !== state) replace(next);
+  }, [today, renewsOn]);
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#101014' : '#7656F6');

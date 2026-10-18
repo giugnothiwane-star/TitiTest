@@ -72,7 +72,7 @@ describe('cartes (scénario B)', () => {
   });
 
   it('carte jetable : identifiant régénéré après chaque dépense, pas après un refus', () => {
-    const c = unwrap(createCard(freshState(D, 50_000), ctxAt(D), { name: 'Jetable', accountId: 'acc_main', color: '#2B2B35', accent: '#7656F6', style: 'metal', avatar: null, monthlyLimit: null, locked: false, kind: 'disposable' }));
+    const c = unwrap(createCard(freshState(D, 50_000), ctxAt(D), { name: 'Jetable', accountId: 'acc_main', color: '#2B2B35', accent: '#7656F6', style: 'minimal', avatar: null, monthlyLimit: null, locked: false, kind: 'disposable' }));
     const first = c.data.demoId;
     const s1 = unwrap(recordExpense(c.state, ctxAt(D), { accountId: 'acc_main', cardId: c.data.id, amount: 1_000, merchant: 'A', category: 'food' })).state;
     const after = s1.cards.find((x) => x.id === c.data.id)!;

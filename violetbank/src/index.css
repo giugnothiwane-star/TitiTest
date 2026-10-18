@@ -105,6 +105,12 @@
       linear-gradient(180deg, #8C7BFF 0%, #7656F6 30%, #4C32B8 70%, #2B1C6E 100%);
   }
   /* Dégradé de marque violet → bleu clair (pastilles, en-têtes de prêts, QR). */
+  /* Reflet qui balaie les cartes premium. */
+  .card-shine {
+    background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.38) 47%, rgb(255 255 255 / 0.08) 53%, transparent 70%);
+    background-size: 250% 100%;
+    background-position: 120% 0;
+  }
   .brand-gradient {
     background-image: linear-gradient(135deg, rgb(var(--azure)) 0%, rgb(var(--brand)) 52%, rgb(var(--brand-deep)) 100%);
   }

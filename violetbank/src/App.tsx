@@ -28,6 +28,7 @@ const Budgets = lazy(() => import('./pages/Budgets'));
 const Stats = lazy(() => import('./pages/Stats'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const Profile = lazy(() => import('./pages/Profile'));
+const Subscriptions = lazy(() => import('./pages/Subscriptions'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 const Help = lazy(() => import('./pages/Help'));
 const Journal = lazy(() => import('./pages/Journal'));
@@ -108,6 +109,7 @@ export function App() {
             <Route path="/statistiques" element={<Stats />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/profil" element={<Profile />} />
+            <Route path="/abonnements" element={<Subscriptions />} />
             <Route path="/parametres" element={<SettingsPage />} />
             <Route path="/aide" element={<Help />} />
             <Route path="/journal" element={<Journal />} />

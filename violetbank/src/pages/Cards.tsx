@@ -1,15 +1,16 @@
 import clsx from 'clsx';
-import { ChevronLeft, ChevronRight, CreditCard, Lock, Pencil, Plus, Receipt, RefreshCw, Trash2, Unlock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crown, CreditCard, Lock, Pencil, Plus, Receipt, RefreshCw, Trash2, Unlock } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AccountSelect } from '../components/AccountSelect';
 import { RoundActions, Widget } from '../components/Hero';
 import { AmountInput } from '../components/AmountInput';
 import { TransactionList } from '../components/Transactions';
-import { VirtualCardView } from '../components/VirtualCardView';
+import { cardBackground, VirtualCardView } from '../components/VirtualCardView';
 import { Badge, Button, Card, ConfirmDialog, EmptyState, Field, IconButton, KeyValue, Modal, PageHeader, Progress, Segmented, Switch, TextInput } from '../components/ui';
 import { createCard, deleteCard, demoExpiry, regenerateCardId, setCardLock, updateCard, type CardInput } from '../domain/cards';
 import { monthKey } from '../domain/dates';
+import { CARD_STYLES, PLAN_INFO, planAllowsStyle } from '../domain/plans';
 import { centsToInput, parseAmount } from '../domain/money';
 import type { CardKind, CardStyle, VirtualCard } from '../domain/schema';
 import { cardMonthSpent } from '../domain/selectors';
@@ -29,12 +30,6 @@ const THEMES: { name: string; color: string; accent: string }[] = [
   { name: 'Ambre', color: '#F3A642', accent: '#E44F62' },
   { name: 'Ivoire', color: '#F7F7FB', accent: '#E9E3FF' },
 ];
-const STYLES: { value: CardStyle; label: string }[] = [
-  { value: 'gradient', label: 'Dégradé' },
-  { value: 'aurora', label: 'Aurore' },
-  { value: 'metal', label: 'Métal' },
-  { value: 'minimal', label: 'Uni' },
-];
 const AVATARS = ['', '🦄', '🚀', '🎮', '✈️', '🌙', '💎', '🐱', '🔥', '🌸'];
 
 function CardForm({ card, onClose }: { card?: VirtualCard; onClose: () => void }) {
@@ -49,6 +44,15 @@ function CardForm({ card, onClose }: { card?: VirtualCard; onClose: () => void }
   const [limit, setLimit] = useState(card?.monthlyLimit ? centsToInput(card.monthlyLimit) : '');
   const [kind, setKind] = useState<CardKind>(card?.kind ?? 'standard');
   const [error, setError] = useState<{ name?: string; limit?: string; form?: string }>({});
+  const [lockedPick, setLockedPick] = useState<CardStyle | null>(null);
+  const navigate = useNavigate();
+  const pickStyle = (style: CardStyle) => {
+    // Un design premium déjà porté par la carte reste sélectionnable après une résiliation.
+    if (planAllowsStyle(profile.plan, style) || style === card?.style) {
+      setLockedPick(null);
+      setForm((f) => ({ ...f, style }));
+    } else setLockedPick(style);
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const errs: typeof error = {};
@@ -102,10 +106,44 @@ function CardForm({ card, onClose }: { card?: VirtualCard; onClose: () => void }
               ))}
             </div>
           </fieldset>
-          <div>
-            <span className="label">Style</span>
-            <Segmented label="Style de carte" value={form.style} onChange={(style) => setForm((f) => ({ ...f, style }))} options={STYLES} size="sm" />
-          </div>
+          <fieldset>
+            <legend className="label">Design</legend>
+            <div className="grid grid-cols-3 gap-2">
+              {CARD_STYLES.map((st) => {
+                const allowed = planAllowsStyle(profile.plan, st.value) || st.value === card?.style;
+                const active = form.style === st.value;
+                return (
+                  <button
+                    key={st.value}
+                    type="button"
+                    onClick={() => pickStyle(st.value)}
+                    aria-pressed={active}
+                    aria-label={allowed ? `Design ${st.label}` : `Design ${st.label}, réservé à ${PLAN_INFO[st.plan].name}`}
+                    className={clsx('group relative overflow-hidden rounded-xl border-2 p-1 text-left transition active:scale-95', active ? 'border-brand' : 'border-transparent')}
+                  >
+                    <span className="relative block aspect-[1.586] w-full overflow-hidden rounded-lg" style={{ background: cardBackground({ color: form.color, accent: form.accent, style: st.value }) }}>
+                      {!allowed && (
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/45">
+                          <Lock size={14} className="text-white" aria-hidden />
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-1 block truncate text-[11px] font-semibold">{st.label}</span>
+                    {st.plan !== 'essentiel' && <span className={clsx('block truncate text-[10px]', allowed ? 'text-ok' : 'text-muted')}>{allowed ? 'Débloqué' : PLAN_INFO[st.plan].name}</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {lockedPick && (
+              <div className="mt-2 flex items-center gap-3 rounded-2xl border border-brand/30 bg-brand-soft/60 p-3 text-sm">
+                <Crown size={18} className="shrink-0 text-brand" aria-hidden />
+                <span className="min-w-0 flex-1">Design réservé à l’abonnement fictif <strong>{PLAN_INFO[CARD_STYLES.find((x) => x.value === lockedPick)!.plan].name}</strong>.</span>
+                <Button size="sm" type="button" onClick={() => { onClose(); navigate('/abonnements'); }}>
+                  Voir
+                </Button>
+              </div>
+            )}
+          </fieldset>
           <fieldset>
             <legend className="label">Avatar (facultatif)</legend>
             <div className="flex flex-wrap gap-1.5">
@@ -240,6 +278,16 @@ export default function Cards() {
           </>
         )}
       </section>
+      <Link to="/abonnements" className="mb-4 flex items-center gap-3 overflow-hidden rounded-[24px] p-4 text-white shadow-glow transition active:scale-[.99]" style={{ background: PLAN_INFO.nuit.gradient }}>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15">
+          <Crown size={20} aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold">Designs premium</span>
+          <span className="block truncate text-sm text-white/75">Holographique, Néon, Galaxie, Royale… avec un abonnement fictif</span>
+        </span>
+        <ChevronRight size={20} aria-hidden />
+      </Link>
       {!card ? (
         <Widget>
           <EmptyState icon={CreditCard} title="Aucune carte de démonstration" action={<Button icon={Plus} onClick={() => setEditing('new')}>Créer ma première carte</Button>}>

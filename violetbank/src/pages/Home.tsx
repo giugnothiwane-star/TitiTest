@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Hero, HeroAmount, HeroPill, RoundActions, Widget } from '../components/Hero';
 import { Icon } from '../components/Icon';
+import { cardBackground } from '../components/VirtualCardView';
 import { Button, EmptyState, Modal, Switch } from '../components/ui';
 import { createCard } from '../domain/cards';
 import { getCategory } from '../domain/categories';
@@ -168,13 +169,10 @@ function SpendingSparkline({ today }: { today: string }) {
 
 function MiniCard({ card }: { card: VirtualCard }) {
   return (
-    <div className="relative aspect-[1.586] w-full overflow-hidden rounded-lg shadow-soft" style={{ background: card.style === 'minimal' ? card.color : `linear-gradient(135deg, ${card.color}, ${card.accent})` }}>
+    <div className="relative aspect-[1.586] w-full overflow-hidden rounded-lg shadow-soft" style={{ background: cardBackground(card) }}>
       <span className="absolute right-1.5 top-1 text-[8px] font-black tracking-widest text-white/85">DEMO</span>
       {card.kind === 'disposable' && <span className="absolute left-1.5 top-1 rounded bg-white/25 px-1 text-[7px] font-bold text-white">1×</span>}
-      <span className="absolute bottom-1.5 right-1.5 flex">
-        <span className="h-3 w-3 rounded-full bg-white/70" />
-        <span className="-ml-1.5 h-3 w-3 rounded-full bg-white/35" />
-      </span>
+      <span className="absolute bottom-1 right-1.5 text-[10px] font-black italic text-white/80">V</span>
       {card.locked && <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-[10px] font-bold text-white">Verrouillée</span>}
     </div>
   );
@@ -226,7 +224,7 @@ export function Home() {
   const createDisposable = () => {
     const accountId = accounts[0]?.id;
     if (!accountId) return;
-    const res = act((s, ctx) => createCard(s, ctx, { name: 'Jetable', accountId, color: '#2B2B35', accent: '#7656F6', style: 'metal', avatar: null, monthlyLimit: null, locked: false, kind: 'disposable' }), { success: 'Carte jetable générée : son identifiant change après chaque dépense simulée.' });
+    const res = act((s, ctx) => createCard(s, ctx, { name: 'Jetable', accountId, color: '#2B2B35', accent: '#7656F6', style: 'minimal', avatar: null, monthlyLimit: null, locked: false, kind: 'disposable' }), { success: 'Carte jetable générée : son identifiant change après chaque dépense simulée.' });
     if (res.ok) navigate('/cartes');
   };
   const disposable = cards.find((c) => c.kind === 'disposable');
