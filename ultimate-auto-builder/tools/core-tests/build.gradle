@@ -1,0 +1,55 @@
+// Build autonome compilant uniquement le cœur indépendant de Minecraft (com.ultimateautobuilder.core)
+// et ses tests JUnit. Permet de valider générateurs, catalogue, mise à l'échelle et importeurs
+// sans télécharger Minecraft ni NeoForge.
+plugins {
+    id 'java'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['../../src/main/java']
+            include 'com/ultimateautobuilder/core/**'
+        }
+        resources.srcDirs = []
+    }
+    test {
+        java {
+            srcDirs = ['../../src/test/java']
+            include 'com/ultimateautobuilder/core/**'
+        }
+    }
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-Xlint:unchecked'
+}
+
+test {
+    useJUnitPlatform()
+    maxHeapSize = '2g'
+    systemProperty 'uab.previewDir', project.findProperty('previewDir') ?: ''
+    systemProperty 'uab.previewSize', project.findProperty('previewSize') ?: 'NORMAL'
+    systemProperty 'uab.previewFilter', project.findProperty('previewFilter') ?: ''
+    testLogging {
+        events 'failed'
+        exceptionFormat 'full'
+        showStandardStreams = true
+    }
+}
