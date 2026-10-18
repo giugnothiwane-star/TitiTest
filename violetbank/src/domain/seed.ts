@@ -124,7 +124,7 @@ export function createDemoState(today: ISODate = toISODate(new Date())): BankSta
   apply(deposit(state, ctxAt(day(-97), '09:13:00'), { accountId: spending.id, amount: 120_000, label: 'Fonds de test initiaux' }));
   apply(deposit(state, ctxAt(day(-97), '09:14:00'), { accountId: savings.id, amount: 250_000, label: 'Fonds de test initiaux' }));
 
-  const premium = apply(createCard(state, ctxAt(day(-96)), { name: 'Violet Premium', accountId: main, color: '#7656F6', accent: '#4930B5', style: 'gradient', avatar: '🦄', monthlyLimit: 250_000, locked: false }));
+  const premium = apply(createCard(state, ctxAt(day(-96)), { name: 'Violet Premium', accountId: main, color: '#7656F6', accent: '#38BDF8', style: 'gradient', avatar: '🦄', monthlyLimit: 250_000, locked: false }));
   const online = apply(createCard(state, ctxAt(day(-96)), { name: 'Achats en ligne', accountId: spending.id, color: '#101014', accent: '#7656F6', style: 'metal', avatar: null, monthlyLimit: 60_000, locked: false }));
   apply(createCard(state, ctxAt(day(-40)), { name: 'Jetable', accountId: spending.id, color: '#2B2B35', accent: '#7656F6', style: 'metal', avatar: null, monthlyLimit: 20_000, locked: false, kind: 'disposable' }));
   apply(createCard(state, ctxAt(day(-60)), { name: 'Voyage', accountId: main, color: '#B9A7FF', accent: '#4285F4', style: 'aurora', avatar: '✈️', monthlyLimit: null, locked: true }));

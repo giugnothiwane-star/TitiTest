@@ -18,7 +18,7 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'soft' | 'dark';
 type Size = 'sm' | 'md' | 'lg';
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand text-white shadow-glow hover:bg-brand-deep active:scale-[.98]',
+  primary: 'bg-gradient-to-r from-brand to-[#5B7BFF] text-white shadow-glow hover:brightness-110 active:scale-[.98]',
   secondary: 'bg-surface text-ink border border-line hover:bg-raised active:scale-[.98]',
   ghost: 'text-ink hover:bg-raised',
   danger: 'bg-danger text-white hover:brightness-95 active:scale-[.98]',
@@ -193,7 +193,7 @@ export function Switch({ checked, onChange, label, description, disabled }: { ch
         aria-checked={checked}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={clsx('relative h-7 w-12 shrink-0 rounded-full transition', checked ? 'bg-brand' : 'bg-line', disabled && 'opacity-50')}
+        className={clsx('relative h-7 w-12 shrink-0 rounded-full transition', checked ? 'bg-gradient-to-r from-brand to-azure' : 'bg-line', disabled && 'opacity-50')}
       >
         <span className={clsx('absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all', checked ? 'left-6' : 'left-1')} />
       </button>
@@ -239,7 +239,7 @@ export function EmptyState({ icon: IconCmp, title, children, action }: { icon: L
     <div className="flex flex-col items-center px-6 py-12 text-center">
       <div className="relative mb-5">
         <div className="absolute inset-0 rounded-[28px] bg-brand/20 blur-xl" />
-        <div className="relative flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-to-br from-[#B9A7FF] via-brand to-brand-deep text-white shadow-glow">
+        <div className="relative flex h-16 w-16 items-center justify-center rounded-[22px] brand-gradient text-white shadow-glow">
           <IconCmp size={28} aria-hidden />
         </div>
       </div>

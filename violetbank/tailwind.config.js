@@ -17,6 +17,8 @@ export default {
         'brand-deep': token('brand-deep'),
         'brand-soft': token('brand-soft'),
         'brand-ink': token('brand-ink'),
+        azure: token('azure'),
+        'azure-soft': token('azure-soft'),
         ok: token('ok'),
         danger: token('danger'),
         warn: token('warn'),
@@ -29,7 +31,7 @@ export default {
       boxShadow: {
         soft: '0 1px 2px rgb(16 16 20 / 0.04), 0 4px 16px rgb(16 16 20 / 0.06)',
         lift: '0 2px 4px rgb(16 16 20 / 0.06), 0 12px 32px rgb(16 16 20 / 0.12)',
-        glow: '0 8px 30px rgb(118 86 246 / 0.35)',
+        glow: '0 8px 30px rgb(118 86 246 / 0.32), 0 2px 12px rgb(56 189 248 / 0.22)',
       },
       borderRadius: { '4xl': '2rem' },
       keyframes: {

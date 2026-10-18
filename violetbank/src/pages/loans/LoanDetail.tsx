@@ -150,7 +150,7 @@ export default function LoanDetail() {
       />
       <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
         <Card className="overflow-hidden lg:col-span-2">
-          <div className="flex items-center gap-4 bg-gradient-to-br from-brand to-brand-deep p-6 text-white">
+          <div className="flex items-center gap-4 brand-gradient p-6 text-white">
             <ProductIcon product={product} size={52} />
             <div className="min-w-0 flex-1">
               <p className="text-sm text-white/80">Capital restant dû (simulation)</p>

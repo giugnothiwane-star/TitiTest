@@ -73,7 +73,7 @@ export function LockScreen() {
   if (!lock || unlocked) return null;
   const waiting = cooldownUntil > now;
   return (
-    <div className="fixed inset-0 z-[300] flex flex-col items-center justify-between bg-[linear-gradient(180deg,#9C80FF_0%,#7656F6_30%,#4C32B8_70%,#2B1C6E_100%)] px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))] text-white" role="dialog" aria-modal="true" aria-label="Déverrouiller VBanque">
+    <div className="fixed inset-0 z-[300] flex flex-col items-center justify-between lock-bg px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))] text-white" role="dialog" aria-modal="true" aria-label="Déverrouiller VBanque">
       <div className="flex flex-col items-center text-center">
         <LogoMark size={72} className="shadow-glow" />
         <Wordmark onDark className="mt-4 text-2xl" />

@@ -13,7 +13,7 @@ import { Badge, Segmented } from './ui';
 
 export function ProductIcon({ product, size = 44 }: { product?: LoanProduct; size?: number }) {
   return (
-    <span className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#B9A7FF] to-brand text-white" style={{ width: size, height: size }}>
+    <span className="inline-flex shrink-0 items-center justify-center rounded-2xl brand-gradient text-white" style={{ width: size, height: size }}>
       <Icon name={product?.icon ?? 'landmark'} size={size * 0.45} />
     </span>
   );

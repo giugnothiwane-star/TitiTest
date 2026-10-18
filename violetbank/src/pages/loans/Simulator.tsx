@@ -29,7 +29,7 @@ export default function Simulator() {
         </Card>
         <div className="space-y-6 lg:col-span-3">
           <Card className="overflow-hidden">
-            <div className="bg-gradient-to-br from-brand to-brand-deep p-6 text-white">
+            <div className="brand-gradient p-6 text-white">
               <p className="text-sm text-white/80">{ctl.params.mode === 'annuity' ? 'Mensualité fictive' : 'Première mensualité fictive'}</p>
               <p className="num mt-1 text-4xl font-extrabold tracking-tight" data-testid="sim-payment">{q ? money(q.firstPayment) : '—'}</p>
               {q && q.lastPayment !== q.firstPayment && <p className="mt-1 text-sm text-white/75">Dernière échéance : {money(q.lastPayment)} (ajustement d’arrondi{ctl.params.mode === 'constant_principal' ? ' et capital constant' : ''})</p>}

@@ -23,7 +23,7 @@ const AVATARS = ['🦄', '🦊', '🐼', '🐱', '🚀', '🌙', '🎮', '🌸',
 
 /** Formules fictives : uniquement visuelles, sans prix ni avantage réel. */
 export const PLANS: { key: Plan; name: string; desc: string; gradient: string }[] = [
-  { key: 'essentiel', name: 'Essentiel', desc: 'La formule de base de la simulation.', gradient: 'linear-gradient(135deg,#9C80FF,#4C32B8)' },
+  { key: 'essentiel', name: 'Essentiel', desc: 'La formule de base de la simulation.', gradient: 'linear-gradient(135deg,#7DD8FF,#7656F6 55%,#4C32B8)' },
   { key: 'amethyste', name: 'Améthyste', desc: 'Reflets violets profonds.', gradient: 'linear-gradient(135deg,#B06AF2,#5B2BB8)' },
   { key: 'orchidee', name: 'Orchidée', desc: 'Dégradé rose orchidée.', gradient: 'linear-gradient(135deg,#F07AC0,#7656F6)' },
   { key: 'nuit', name: 'Nuit violette', desc: 'Noir mat et violet néon.', gradient: 'linear-gradient(135deg,#2B1C6E,#101014)' },

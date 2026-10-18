@@ -191,7 +191,7 @@ function Header({ onHero }: { onHero: boolean }) {
   const transparent = onHero && !scrolled;
   return (
     <header className={clsx('sticky top-0 z-40 pt-[env(safe-area-inset-top)] transition-colors duration-200', transparent ? 'bg-transparent' : onHero ? 'bg-[#2B1C6E]/90 backdrop-blur-xl' : 'border-b border-line/70 bg-bg/85 backdrop-blur-xl')}>
-      <p className={clsx('truncate whitespace-nowrap px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-[.08em] min-[400px]:text-[10px] sm:text-[11px] sm:tracking-[.14em]', onHero ? 'bg-black/15 text-white/85' : 'bg-gradient-to-r from-brand-deep via-brand to-brand-deep text-white')}>
+      <p className={clsx('truncate whitespace-nowrap px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-[.08em] min-[400px]:text-[10px] sm:text-[11px] sm:tracking-[.14em]', onHero ? 'bg-black/15 text-white/85' : 'bg-gradient-to-r from-brand-deep via-brand to-azure text-white')}>
         Simulation bancaire — argent et crédits fictifs
       </p>
       <div className="mx-auto flex h-[64px] max-w-6xl items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
@@ -271,7 +271,7 @@ function BottomNav() {
             end={item.end}
             aria-label={item.label}
             className={({ isActive }) =>
-              clsx('relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-1.5 text-[11px] font-semibold transition-all', isActive ? 'bg-white/15 text-white' : 'text-white/65 hover:text-white')
+              clsx('relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-1.5 text-[11px] font-semibold transition-all', isActive ? 'bg-gradient-to-b from-azure/25 to-brand/30 text-white shadow-[inset_0_0_0_1px_rgb(125_216_255/0.25)]' : 'text-white/65 hover:text-white')
             }
           >
             <item.icon size={22} aria-hidden />
@@ -486,7 +486,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {onHero && (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 bg-[linear-gradient(180deg,#9C80FF_0%,#7656F6_20%,#5E42DE_40%,#4C32B8_60%,#2B1C6E_84%,rgb(var(--bg))_100%)]"
+            className="hero-bg pointer-events-none absolute inset-x-0 top-0"
             style={{ height: HERO_ROUTES.get(location.pathname) }}
           />
         )}

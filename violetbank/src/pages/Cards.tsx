@@ -20,6 +20,8 @@ import { useUi } from '../store/ui';
 const THEMES: { name: string; color: string; accent: string }[] = [
   { name: 'Violet', color: '#7656F6', accent: '#4930B5' },
   { name: 'Lavande', color: '#B9A7FF', accent: '#7656F6' },
+  { name: 'Aurore', color: '#7656F6', accent: '#38BDF8' },
+  { name: 'Lagon', color: '#7DD8FF', accent: '#5B7BFF' },
   { name: 'Nuit', color: '#101014', accent: '#4930B5' },
   { name: 'Océan', color: '#4285F4', accent: '#4930B5' },
   { name: 'Menthe', color: '#26B879', accent: '#0E7C66' },

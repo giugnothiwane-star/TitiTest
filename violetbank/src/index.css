@@ -14,6 +14,8 @@
   --brand-deep: 76 50 184; /* #4C32B8 */
   --brand-soft: 232 225 255; /* #E8E1FF */
   --brand-ink: 76 50 184;
+  --azure: 56 189 248; /* #38BDF8 */
+  --azure-soft: 224 245 255;
   --ok: 36 180 126; /* #24B47E */
   --danger: 228 79 98; /* #E44F62 */
   --warn: 243 166 66;
@@ -32,6 +34,8 @@
   --brand-deep: 118 86 246;
   --brand-soft: 45 37 84;
   --brand-ink: 190 172 255;
+  --azure: 125 216 255; /* #7DD8FF */
+  --azure-soft: 22 52 74;
   --ok: 46 200 140;
   --danger: 240 106 124;
   --warn: 245 178 90;
@@ -86,6 +90,24 @@
 }
 
 @layer components {
+  /* Fond des écrans « hero » : violet profond éclairé de halos bleu clair, fondu vers le fond de page. */
+  .hero-bg {
+    background:
+      radial-gradient(85% 42% at 100% 0%, rgb(125 216 255 / 0.85) 0%, rgb(125 216 255 / 0) 62%),
+      radial-gradient(70% 34% at 0% 18%, rgb(56 140 255 / 0.55) 0%, rgb(56 140 255 / 0) 66%),
+      radial-gradient(60% 30% at 70% 46%, rgb(156 128 255 / 0.45) 0%, rgb(156 128 255 / 0) 70%),
+      linear-gradient(180deg, #8C7BFF 0%, #7656F6 22%, #5E42DE 42%, #4C32B8 62%, #2B1C6E 84%, rgb(var(--bg)) 100%);
+  }
+  .lock-bg {
+    background:
+      radial-gradient(90% 50% at 100% 0%, rgb(125 216 255 / 0.8) 0%, rgb(125 216 255 / 0) 60%),
+      radial-gradient(80% 40% at 0% 100%, rgb(56 189 248 / 0.45) 0%, rgb(56 189 248 / 0) 65%),
+      linear-gradient(180deg, #8C7BFF 0%, #7656F6 30%, #4C32B8 70%, #2B1C6E 100%);
+  }
+  /* Dégradé de marque violet → bleu clair (pastilles, en-têtes de prêts, QR). */
+  .brand-gradient {
+    background-image: linear-gradient(135deg, rgb(var(--azure)) 0%, rgb(var(--brand)) 52%, rgb(var(--brand-deep)) 100%);
+  }
   .card {
     @apply rounded-[28px] border border-line/60 bg-surface shadow-soft;
   }

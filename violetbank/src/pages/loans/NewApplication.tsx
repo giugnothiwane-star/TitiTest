@@ -116,7 +116,7 @@ export default function NewApplication() {
           <div className="space-y-5">
             <h2 className="text-xl font-bold">Sur quelle durée ?</h2>
             <DurationField ctl={ctl} />
-            <div className="rounded-2xl bg-gradient-to-br from-brand to-brand-deep p-5 text-white">
+            <div className="rounded-2xl brand-gradient p-5 text-white">
               <p className="text-sm text-white/80">Mensualité calculée</p>
               <p className="num text-3xl font-extrabold" data-testid="wizard-payment">{q ? money(q.firstPayment) : '—'}</p>
               {q && <p className="mt-1 text-sm text-white/80">Total théorique {money(q.totalAmount)} · intérêts {money(q.totalInterest)}</p>}

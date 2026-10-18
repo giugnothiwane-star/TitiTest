@@ -9,7 +9,7 @@ import { LogoMark } from './Logo';
 function background(card: Pick<VirtualCard, 'color' | 'accent' | 'style'>): string {
   switch (card.style) {
     case 'aurora':
-      return `radial-gradient(120% 120% at 0% 0%, ${card.color} 0%, transparent 55%), radial-gradient(120% 120% at 100% 100%, ${card.accent} 0%, transparent 60%), linear-gradient(135deg, #2a1f63, #101014)`;
+      return `radial-gradient(120% 120% at 0% 0%, ${card.color} 0%, transparent 55%), radial-gradient(120% 120% at 100% 100%, ${card.accent} 0%, transparent 60%), linear-gradient(135deg, #2a1f63, #0b1a2e)`;
     case 'metal':
       return `linear-gradient(135deg, ${card.color} 0%, #2b2b35 45%, ${card.color} 100%), repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 2px, transparent 2px 4px)`;
     case 'minimal':

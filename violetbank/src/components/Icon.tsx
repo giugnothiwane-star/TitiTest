@@ -49,4 +49,4 @@ export function Icon({ name, className, size = 18 }: { name: string; className?:
   return <Cmp className={className} size={size} aria-hidden />;
 }
 
-export const PALETTE = ['#7656F6', '#4930B5', '#B9A7FF', '#4285F4', '#26B879', '#F3A642', '#E44F62', '#101014', '#0EA5B7', '#D946A8'];
+export const PALETTE = ['#7656F6', '#4930B5', '#B9A7FF', '#4285F4', '#38BDF8', '#26B879', '#F3A642', '#E44F62', '#101014', '#0EA5B7', '#D946A8'];

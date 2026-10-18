@@ -74,7 +74,7 @@ export default function Receive() {
       <PageHeader title="Recevoir de l’argent fictif" icon={ArrowDownLeft} subtitle="Partagez votre identifiant de démonstration ou simulez la réception d’un contact fictif." />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="flex flex-col items-center p-6 text-center">
-          <div className="rounded-3xl bg-gradient-to-br from-[#B9A7FF] via-brand to-brand-deep p-3 shadow-glow">
+          <div className="rounded-3xl brand-gradient p-3 shadow-glow">
             <DemoPattern seed={state.profile.demoHandle} />
           </div>
           <p className="mt-5 text-sm text-muted">Votre identifiant local de démonstration</p>
