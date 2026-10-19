@@ -7,7 +7,7 @@ Mod Minecraft Java **1.21.1** pour **NeoForge 21.1.x** (Java 21), en **un seul f
 
 Le menu de construction s'ouvre avec le **Cristal de Glace** (clic droit, touche **B** ou **R1** à la manette) ; le studio avec le **Cristal de Création Visuelle** (clic droit, touche **V** ou **R1** quand ce cristal est tenu).
 
-> ⚠️ **État de vérification — à lire.** Voir [Rapport de vérification](#rapport-de-vérification) : tout le code est compilé par la CI GitHub Actions contre le vrai NeoForge 1.21.1, les tests unitaires et les **GameTests** (scénarios exécutés dans un vrai serveur Minecraft) y passent. Le jeu n'a en revanche **jamais été lancé avec une interface graphique** : les écrans, les shaders à l'écran et la manette n'ont pas été vus en jeu.
+> ⚠️ **État de vérification — à lire.** Voir [Rapport de vérification](#rapport-de-vérification) : tout le code est compilé par la CI GitHub Actions contre le vrai NeoForge 1.21.1, les tests unitaires et les **GameTests** (scénarios exécutés dans un vrai serveur Minecraft) y passent. Un **vrai client Minecraft** est aussi lancé par la CI sous affichage virtuel (rendu logiciel Mesa) : le mod ouvre ses écrans, pose une construction et publie des captures d'écran, relues à chaque modification. Aucun humain n'a encore joué avec la souris, la manette, un téléphone ou une carte graphique réelle.
 
 ---
 
@@ -226,14 +226,14 @@ com.ultimateautobuilder
 │   ├── validation/  Limites et validation
 │   ├── importer/    .uabm, .vox, structure brute
 │   ├── image/       Image → Construction : chargement, analyse, reconstruction, styles, vues, plan, éditeur, projets
-│   └── render/      Rendu isométrique des miniatures
+│   └── render/      Rendu isométrique (miniatures de secours, tests)
 ├── builder/         Moteur serveur : plan, tâches de pose/restauration, gestionnaire, tickets de chunks
 ├── network/         Paquets client ↔ serveur
 ├── command/         /uab
 ├── config/          Configs client et serveur
 ├── storage/         Historique, journaux d'annulation, modèles personnalisés
 ├── item/, registry/ Cristal de Glace, onglet créatif
-├── client/          Menu, paramètres, aperçu fantôme, manette, miniatures, barre de progression
+├── client/          Menu, paramètres, aperçus 3D texturés (render/), fantôme, manette, barre de progression, mode capture CI (dev/)
 │   ├── image/       Écran Image → Construction, sélecteur de fichiers, réception téléphone, envoi au serveur
 │   └── visual/      Studio visuel : profils, post-traitement GLSL, brouillard, couleurs, pack de textures, FPS
 └── gametest/        Scénarios exécutés dans un serveur réel
@@ -255,16 +255,18 @@ Réalisé dans l'environnement de développement (conteneur sans accès aux dép
 | Modèles | ✅ Les 510 modèles générés (tests) ; rendus isométriques PNG inspectés visuellement pour un large échantillon, dont les mobs, les constructions inspirées et des reconstructions d'images |
 | Couche Minecraft/NeoForge (serveur, réseau, client, écrans, shaders) | ✅ **Compilée par la CI** GitHub Actions contre NeoForge 21.1.x (dernière version publiée), avec tests unitaires ; shaders GLSL validés par `glslang` ; signatures d'API vérifiées par une sonde `javap` |
 | GameTests | ✅ Exécutés par la CI dans un vrai serveur Minecraft 1.21.1 (voir le résultat de la dernière exécution dans l'onglet *Actions*) |
-| Jeu lancé avec interface graphique | ❌ **Jamais** : les écrans, l'aperçu fantôme, le rendu des shaders, le pack de textures généré, le sélecteur de fichiers, la réception depuis un téléphone et la manette n'ont pas été vus ni utilisés en jeu |
+| Client graphique réel (CI) | ✅ Lancé sous affichage virtuel (1280×720, échelle automatique, rendu logiciel Mesa llvmpipe) : captures du catalogue, du grand aperçu 3D, du fantôme, d'une construction posée par le serveur, d'Image → Construction (analyse, aperçu 3D, comparaison, blocs estimés) et du studio, publiées dans la vérification « Captures en jeu ». Elles ont révélé puis permis de corriger : 5 modèles seulement par page, réglages hors de l'écran, aperçu de 32 px, boutons au texte invisible et position « devant moi » sous le monde |
+| Non vérifié | ❌ Interactions humaines (souris, clavier, manette R1), carte graphique réelle, sélecteur de fichiers natif, réception depuis un téléphone, rendu des effets du studio à l'écran, multijoueur sur serveur dédié |
 | Gains de FPS | ❌ **Aucun chiffre annoncé** : le studio mesure les FPS sur la machine du joueur ; rien n'a été mesuré ici |
 
 ## Limites connues
 
-- **Aperçu fantôme** : rendu en faces translucides colorées (couleur moyenne de chaque bloc), pas en textures réelles ; au-delà du nombre de faces configuré, il est échantillonné.
+- **Aperçus 3D** : catalogue, grand aperçu, fantôme et Image → Construction utilisent les vrais modèles et textures des blocs. Les blocs dessinés par un rendu d'entité (coffres, lits, panneaux, bannières, têtes) et les fluides y sont représentés par un bloc d'apparence proche (tonneau, laine, verre bleu…) ; dans le monde, ce sont bien les vrais blocs qui sont posés. Les grands modèles sont réduits pour l'aperçu (40 blocs pour les cartes, 112 pour le grand aperçu) ; au-delà du nombre de faces configuré, le fantôme repasse en faces colorées.
+- **Échelle d'interface** : les écrans du constructeur et d'Image → Construction garantissent une surface de 640×360 unités ; à l'échelle automatique sur un petit écran, le texte y est donc un peu plus petit que dans le reste du jeu (jamais sous un pixel réel par unité).
 - **Retour arrière** : restaure les blocs et le contenu des blocs-entités remplacés ; les entités (mobs, objets au sol, cadres) ne sont pas restaurées. En mode prudent, un bloc modifié par un joueur après la construction est conservé.
 - **Multijoueur et modèles personnalisés** : le client reçoit un aperçu réduit (48 blocs de haut max) pour les miniatures et le fantôme ; la construction utilise le modèle complet du serveur.
 - **Mode ressources** : vérifie et retire les blocs de l'inventaire au lancement (rien n'est retiré en mode créatif) ; les blocs sans objet correspondant (feu, portails…) ne sont pas comptés.
 - **R1** : dépend de la reconnaissance de la manette par GLFW (voir plus haut).
 - **Image → Construction** : reconstruction **heuristique** à partir de silhouettes et de couleurs, pas une compréhension de la scène. Une seule photo ne montre ni la profondeur ni l'arrière : ils sont estimés (et signalés). Les sujets fins ou complexes (membres écartés, arches, intérieurs, objets transparents) sont simplifiés ; un fond chargé peut être conservé avec le sujet (signalé). Les vues complémentaires améliorent la forme mais une enveloppe de silhouettes ne reproduit pas les creux. Couleurs : correspondance avec la couleur moyenne approximative de chaque bloc. La réception depuis un téléphone nécessite que l'ordinateur et le téléphone soient sur le même réseau local et que le pare-feu l'autorise. Le décodage des images utilise `javax.imageio` de Java.
 - **Studio visuel** : le post-traitement s'applique à l'image du monde (pas à l'interface) ; il ne calcule **ni ombres projetées ni reflets** : la section *Ombres* règle seulement l'intensité des tons sombres de l'image et la section *Reflets* indique que la fonction n'est pas disponible (il faudrait un pipeline de rendu dédié). La section *Compatibilité* détecte Iris, Oculus, Embeddium, Sodium… et conseille de désactiver le post-traitement quand un pack de shaders est actif, pour ne pas cumuler deux étalonnages. La recoloration de textures régénère le pack et recharge les ressources (quelques secondes).
-- **Miniatures** : le rendu isométrique logiciel peut montrer de fines rayures claires sur les toits en escalier ; elles n'existent pas dans le monde.
+- **Miniatures de secours** : pendant la préparation d'un aperçu 3D (une fraction de seconde), une miniature isométrique simplifiée s'affiche ; elle peut montrer de fines rayures claires sur les toits en escalier, qui n'existent pas dans le monde.
