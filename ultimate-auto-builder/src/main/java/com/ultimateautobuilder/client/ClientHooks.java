@@ -107,5 +107,6 @@ public final class ClientHooks {
     public static void onCustomPreview(SimplePayloads.CustomPreview payload) {
         ClientState.putCustomPreview(payload.id(), payload.data());
         ThumbnailCache.invalidate(payload.id());
+        com.ultimateautobuilder.client.render.ModelPreviews.invalidate(payload.id());
     }
 }

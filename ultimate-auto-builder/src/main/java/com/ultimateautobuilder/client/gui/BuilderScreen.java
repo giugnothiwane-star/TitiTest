@@ -9,6 +9,7 @@ import com.ultimateautobuilder.client.GamepadInput;
 import com.ultimateautobuilder.client.PlacementController;
 import com.ultimateautobuilder.client.ProgressHud;
 import com.ultimateautobuilder.client.ThumbnailCache;
+import com.ultimateautobuilder.client.render.ModelPreviews;
 import com.ultimateautobuilder.config.ClientConfig;
 import com.ultimateautobuilder.core.catalog.Catalog;
 import com.ultimateautobuilder.core.catalog.Category;
@@ -84,6 +85,9 @@ public final class BuilderScreen extends Screen {
     private Zone zone = Zone.GRID;
     private int controlFocus;
     private int thumbView;
+    // Aperçu 3D : orientation et zoom manipulés à la souris.
+    private float previewYaw, previewPitch = ModelPreviews.BASE_PITCH, previewZoom = 1f;
+    private boolean previewTouched, previewDragging, previewDragged;
     private boolean lastCanBuild;
 
     // Géométrie calculée dans init().
@@ -217,6 +221,10 @@ public final class BuilderScreen extends Screen {
         selectedId = e == null ? null : e.id();
         PlacementController.SETTINGS.entry = e;
         thumbView = 0;
+        previewYaw = 0f;
+        previewPitch = ModelPreviews.BASE_PITCH;
+        previewZoom = 1f;
+        previewTouched = false;
         if (e != null) {
             ClientModels.request(e, PlacementController.SETTINGS.size(), PlacementController.SETTINGS.hollow);
         }
@@ -357,7 +365,7 @@ public final class BuilderScreen extends Screen {
         int w = panelW - 8;
         int half = (w - 4) / 2;
         int textH = 34;
-        thumbSize = Math.max(32, Math.min(compact ? 72 : 112, panelH - detailRows() * ROW_H - textH - 8));
+        thumbSize = Math.max(32, Math.min(compact ? 96 : 150, panelH - detailRows() * ROW_H - textH - 8));
         int y = panelY + thumbSize + textH + 4;
 
         controls.add(addRenderableWidget(Button.builder(Component.literal(sizeLabel(e)), b -> {
@@ -956,13 +964,46 @@ public final class BuilderScreen extends Screen {
                 return true;
             }
         }
-        // Clic sur la grande miniature : vue suivante.
-        if (page == Page.CATALOG && selected() != null && (!compact || detailOpen) && mx >= panelX + (panelW - thumbSize) / 2.0
-                && mx < panelX + (panelW + thumbSize) / 2.0 && my >= panelY && my < panelY + thumbSize) {
-            thumbView = (thumbView + 1) & 3;
+        // Grand aperçu : glisser pour tourner ; un simple clic passe au quart de tour suivant.
+        if (overPreview(mx, my)) {
+            previewDragging = true;
+            previewDragged = false;
             return true;
         }
         return false;
+    }
+
+    private boolean overPreview(double mx, double my) {
+        return page == Page.CATALOG && selected() != null && (!compact || detailOpen) && mx >= panelX + 4 && mx < panelX + panelW - 4
+                && my >= panelY && my < panelY + thumbSize;
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (previewDragging && button == 0) {
+            previewDragged = true;
+            if (!previewTouched) {
+                // On fige la rotation automatique là où elle en est pour éviter un saut.
+                previewYaw += (float) ((System.currentTimeMillis() % 36000L) / 100.0);
+                previewTouched = true;
+            }
+            previewYaw += (float) dx * 1.2f;
+            previewPitch = Math.max(-89f, Math.min(89f, previewPitch + (float) dy * 1.2f));
+            return true;
+        }
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        if (previewDragging && button == 0) {
+            previewDragging = false;
+            if (!previewDragged && overPreview(mx, my)) {
+                thumbView = (thumbView + 1) & 3;
+            }
+            return true;
+        }
+        return super.mouseReleased(mx, my, button);
     }
 
     @Override
@@ -972,6 +1013,10 @@ public final class BuilderScreen extends Screen {
         }
         if (my >= tabsY && my < tabsY + 14) {
             tabScroll = Math.max(0, Math.min(tabs.size() - 1, tabScroll - (int) Math.signum(sy)));
+            return true;
+        }
+        if (overPreview(mx, my) && sy != 0) {
+            previewZoom = Math.max(0.4f, Math.min(4f, previewZoom * (sy > 0 ? 1.15f : 1 / 1.15f)));
             return true;
         }
         if (sy != 0) {
@@ -1097,13 +1142,17 @@ public final class BuilderScreen extends Screen {
             }
             g.fill(x, y, x + CARD_W, y + CARD_H, sel ? 0xE0204A66 : hover ? 0xD0303040 : 0xC0181820);
             g.renderOutline(x, y, CARD_W, CARD_H, sel ? (zone == Zone.GRID ? 0xFF7FE0FF : 0xFF4FA0C0) : 0xFF333344);
-            ResourceLocation tex = ThumbnailCache.get(e, 0);
             int ts = 52;
             int tx = x + (CARD_W - ts) / 2;
-            if (tex != null) {
-                g.blit(tex, tx, y + 3, ts, ts, 0, 0, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE);
-            } else {
-                g.drawCenteredString(font, "…", x + CARD_W / 2, y + 24, 0xFF666666);
+            // Rendu 3D texturé ; miniature isométrique en attendant que le maillage soit prêt.
+            if (!ModelPreviews.drawCard(g, e, x + 2, y + 2, CARD_W - 4, ts + 2, 0)) {
+                ResourceLocation tex = ThumbnailCache.get(e, 0);
+                RenderSystem.enableBlend();
+                if (tex != null) {
+                    g.blit(tex, tx, y + 3, ts, ts, 0, 0, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE);
+                } else {
+                    g.drawCenteredString(font, "…", x + CARD_W / 2, y + 24, 0xFF666666);
+                }
             }
             if (ClientData.isFavorite(e.id())) {
                 g.drawString(font, "★", x + CARD_W - 9, y + 2, 0xFFFFD040, true);
@@ -1147,15 +1196,23 @@ public final class BuilderScreen extends Screen {
             return;
         }
         PlacementController.Settings s = PlacementController.SETTINGS;
-        ResourceLocation tex = ThumbnailCache.get(e, thumbView);
         int tx = panelX + (panelW - thumbSize) / 2;
-        RenderSystem.enableBlend();
-        if (tex != null) {
-            g.blit(tex, tx, panelY, thumbSize, thumbSize, 0, 0, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE);
-        } else {
-            g.drawCenteredString(font, "Génération de l'aperçu…", panelX + panelW / 2, panelY + thumbSize / 2, 0xFF888888);
+        VoxelModel dm = ClientModels.now(e, s.size(), s.hollow);
+        int pw = panelW - 8;
+        g.fill(panelX + 4, panelY, panelX + 4 + pw, panelY + thumbSize, 0x50000000);
+        // Rotation automatique lente tant que le joueur ne manipule pas l'aperçu.
+        float spin = previewTouched ? 0f : (float) ((System.currentTimeMillis() % 36000L) / 100.0);
+        float yaw = ModelPreviews.BASE_YAW - 90f * thumbView + previewYaw + spin;
+        if (!ModelPreviews.drawDetail(g, e, dm, s.size() + "/" + s.hollow, panelX + 4, panelY, pw, thumbSize, yaw, previewPitch, previewZoom)) {
+            ResourceLocation tex = ThumbnailCache.get(e, thumbView);
+            RenderSystem.enableBlend();
+            if (tex != null) {
+                g.blit(tex, tx, panelY, thumbSize, thumbSize, 0, 0, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE);
+            } else {
+                g.drawCenteredString(font, "Génération de l'aperçu…", panelX + panelW / 2, panelY + thumbSize / 2, 0xFF888888);
+            }
         }
-        g.drawString(font, "⟳", tx + thumbSize - 8, panelY + thumbSize - 9, 0xFF6688AA, false);
+        g.drawString(font, "§7glisser : tourner · molette : zoom", panelX + 6, panelY + thumbSize - 9, 0xFF8899AA, false);
         int y = panelY + thumbSize + 2;
         g.drawString(font, font.plainSubstrByWidth("§l" + e.name(), panelW - 8), panelX + 4, y, 0xFFFFFFFF);
         g.drawString(font, font.plainSubstrByWidth(e.category().displayName() + " · complexité " + e.complexity() + "/5", panelW - 8), panelX + 4, y + 11,

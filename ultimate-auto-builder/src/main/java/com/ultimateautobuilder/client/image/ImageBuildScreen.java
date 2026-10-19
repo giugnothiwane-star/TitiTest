@@ -15,7 +15,9 @@ import com.ultimateautobuilder.core.image.ModelViews;
 import com.ultimateautobuilder.core.image.Reconstructor;
 import com.ultimateautobuilder.core.importer.ImportException;
 import com.ultimateautobuilder.core.importer.ModelCodec;
-import com.ultimateautobuilder.core.render.IsoRenderer;
+import com.ultimateautobuilder.client.render.BlockMesh;
+import com.ultimateautobuilder.client.render.MeshCache;
+import com.ultimateautobuilder.client.render.ModelPreviews;
 import com.ultimateautobuilder.network.StatePayload;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -104,9 +106,11 @@ public final class ImageBuildScreen extends Screen {
     }
 
     private volatile String status = "";
+    private final MeshCache meshes = new MeshCache(4);
+    private float previewYaw, previewPitch = 25f, previewZoom = 1f;
+    private boolean previewDragging;
     private volatile boolean busy;
-    private int modelVersion, renderedVersion = -1, renderedPreview = -1, renderedLayer = -1;
-    private boolean renderedHighlight;
+    private int modelVersion;
     private BuildPlanReport.Report report;
     private ModelViews.Comparison comparison;
     private EditBox heightBox, widthBox, depthBox, nameBox;
@@ -456,6 +460,7 @@ public final class ImageBuildScreen extends Screen {
                     imageUploaded[slot] = false;
                     if (slot == 0) {
                         textures.release("mask");
+                        textures.release("subject");
                         S.subject = a.best().subject();
                         S.subjectChosen = false;
                         S.height = defaultHeight(a);
@@ -645,6 +650,7 @@ public final class ImageBuildScreen extends Screen {
                         imageUploaded[i] = false;
                     }
                     textures.release("mask");
+                    textures.release("subject");
                     Reconstructor.Options o = l.options();
                     S.mode = o.mode();
                     S.back = o.back();
@@ -900,16 +906,35 @@ public final class ImageBuildScreen extends Screen {
             g.drawCenteredString(font, "§7Générez d'abord un modèle (onglet Options).", cx + cw / 2, cy + ch / 2, 0xFFFFFFFF);
             return;
         }
-        refreshPreviewTexture();
-        int px = cx + 160, pw = cx + cw - px - 170;
+        int px = previewX(), pw = previewW();
         g.fill(px, cy, px + pw, cy + ch, 0x50000000);
-        if (!textures.draw(g, "preview", px + 2, cy + 2, pw - 4, ch - 4)) {
-            g.drawCenteredString(font, "§7Calcul de la vue…", px + pw / 2, cy + ch / 2, 0xFFFFFFFF);
-        }
+        boolean drawn;
         if (S.preview == 10) {
+            // Comparaison : photo à gauche, face avant texturée du modèle à droite.
+            int half = (pw - 6) / 2;
+            uploadSubject();
+            textures.draw(g, "subject", px + 2, cy + 2, half, ch - 16);
+            drawn = drawMesh(g, "full", px + half + 4, cy + 2, half, ch - 16, 180f, 0f, 1f);
             g.drawString(font, "§7Gauche : sujet de l'image — droite : face avant du modèle", px + 4, cy + ch - 12, 0xFFFFFFFF);
         } else if (S.preview == 9) {
-            g.drawString(font, "§7Couche Y=" + S.layer + " (vue de dessus, avant en bas)", px + 4, cy + ch - 12, 0xFFFFFFFF);
+            drawn = drawMesh(g, "layer", px + 2, cy + 2, pw - 4, ch - 16, 180f, 90f, previewZoom);
+            g.drawString(font, "§7Couche Y=" + S.layer + " (vue de dessus, avant en bas) — molette : couche", px + 4, cy + ch - 12, 0xFFFFFFFF);
+        } else {
+            float yaw, pitch;
+            switch (S.preview) {
+                case 4 -> { yaw = 180f; pitch = 0f; }
+                case 5 -> { yaw = 0f; pitch = 0f; }
+                case 6 -> { yaw = 90f; pitch = 0f; }
+                case 7 -> { yaw = -90f; pitch = 0f; }
+                case 8 -> { yaw = 180f; pitch = 90f; }
+                default -> { yaw = 180f + 35f - 90f * S.preview + previewYaw; pitch = previewPitch; }
+            }
+            drawn = drawMesh(g, S.highlight ? "estimated" : "full", px + 2, cy + 2, pw - 4, ch - 16, yaw, pitch, previewZoom);
+            g.drawString(font, S.preview < 4 ? "§7glisser : tourner · molette : zoom" + (S.highlight ? " · §6verre orange = blocs estimés" : "")
+                    : "§7molette : zoom" + (S.highlight ? " · §6verre orange = blocs estimés" : ""), px + 4, cy + ch - 12, 0xFFFFFFFF);
+        }
+        if (!drawn) {
+            g.drawCenteredString(font, "§7Préparation de l'aperçu 3D…", px + pw / 2, cy + ch / 2, 0xFFFFFFFF);
         }
         // Panneau d'informations.
         int ix = px + pw + 8, iw = cx + cw - ix, y = cy;
@@ -945,67 +970,62 @@ public final class ImageBuildScreen extends Screen {
         }
     }
 
-    /** Recalcule la vue courante hors du thread de rendu quand le modèle ou la vue change. */
-    private void refreshPreviewTexture() {
-        if (renderedVersion == modelVersion && renderedPreview == S.preview && renderedLayer == S.layer && renderedHighlight == S.highlight) {
-            return;
-        }
-        renderedVersion = modelVersion;
-        renderedPreview = S.preview;
-        renderedLayer = S.layer;
-        renderedHighlight = S.highlight;
+    private int previewX() {
+        return cx + 160;
+    }
+
+    private int previewW() {
+        return cx + cw - previewX() - 170;
+    }
+
+    private boolean overPreview(double mx, double my) {
+        return S.tab == Tab.PREVIEW && S.editor != null && mx >= previewX() && mx < previewX() + previewW() && my >= cy && my < cy + ch;
+    }
+
+    /**
+     * Rendu texturé (vrais blocs) du modèle courant. Variantes : modèle complet, blocs estimés
+     * remplacés par du verre orange, ou couche seule.
+     */
+    private boolean drawMesh(GuiGraphics g, String variant, int x, int y, int w, int h, float yaw, float pitch, float zoom) {
         ImageModel m = S.editor.model();
-        int view = S.preview, layer = S.layer, version = modelVersion;
-        boolean hl = S.highlight;
-        ImageAnalysis.Result a = S.analyses[0];
-        WORKER.execute(() -> {
-            try {
-                int w, h;
-                int[] argb;
-                if (view < 4) {
-                    IsoRenderer.Image img = IsoRenderer.render(m.toVoxelModel(), view, 400_000);
-                    w = img.width();
-                    h = img.height();
-                    argb = img.argb();
-                } else if (view == 9) {
-                    ModelViews.Image img = ModelViews.layer(m, layer);
-                    w = img.width();
-                    h = img.height();
-                    argb = img.argb();
-                } else if (view == 10 && a != null) {
-                    ModelViews.Image front = ModelViews.render(m, ModelViews.View.FRONT, false);
-                    ImageData src = ModelViews.cropSubject(a).resize(front.width(), front.height());
-                    w = front.width() * 2 + 2;
-                    h = front.height();
-                    argb = new int[w * h];
-                    for (int y = 0; y < h; y++) {
-                        System.arraycopy(src.argb(), y * front.width(), argb, y * w, front.width());
-                        System.arraycopy(front.argb(), y * front.width(), argb, y * w + front.width() + 2, front.width());
-                    }
-                } else {
-                    ModelViews.View v = switch (view) {
-                        case 5 -> ModelViews.View.BACK;
-                        case 6 -> ModelViews.View.LEFT;
-                        case 7 -> ModelViews.View.RIGHT;
-                        case 8 -> ModelViews.View.TOP;
-                        default -> ModelViews.View.FRONT;
-                    };
-                    ModelViews.Image img = ModelViews.render(m, v, hl);
-                    w = img.width();
-                    h = img.height();
-                    argb = img.argb();
-                }
-                int fw = w, fh = h;
-                int[] fa = argb;
-                minecraft.execute(() -> {
-                    if (version == modelVersion) {
-                        textures.put("preview", fw, fh, fa);
-                    }
-                });
-            } catch (RuntimeException e) {
-                UltimateAutoBuilderMod.LOGGER.debug("Vue Image-to-Build impossible", e);
-            }
+        int version = modelVersion, layer = S.layer;
+        String key = variant + ":" + version + (variant.equals("layer") ? ":" + layer : "");
+        BlockMesh mesh = meshes.get(key, () -> {
+            ImageModel src = switch (variant) {
+                case "layer" -> m.cropLayers(layer, layer);
+                case "estimated" -> estimatedAsGlass(m);
+                default -> m;
+            };
+            return BlockMesh.build(BlockMesh.of(ModelPreviews.lod(src.toVoxelModel(), 128)), 1f, 500_000);
         });
+        if (mesh == null) {
+            return false;
+        }
+        mesh.drawInGui(g, x, y, w, h, yaw, pitch, zoom);
+        return true;
+    }
+
+    /** Copie où chaque bloc estimé devient du verre orange : on voit ce qui provient réellement de l'image. */
+    private static ImageModel estimatedAsGlass(ImageModel m) {
+        ImageModel out = m.copy();
+        for (int y = 0; y < m.sizeY(); y++) {
+            for (int z = 0; z < m.sizeZ(); z++) {
+                for (int x = 0; x < m.sizeX(); x++) {
+                    if (m.get(x, y, z) != null && m.certainty(x, y, z) == ImageModel.ESTIMATED) {
+                        out.set(x, y, z, "minecraft:orange_stained_glass", ImageModel.ESTIMATED);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    private void uploadSubject() {
+        ImageAnalysis.Result a = S.analyses[0];
+        if (a != null && !textures.has("subject")) {
+            ImageData img = ModelViews.cropSubject(a);
+            textures.put("subject", img.width(), img.height(), img.argb());
+        }
     }
 
     private void renderMaterials(GuiGraphics g) {
@@ -1068,7 +1088,42 @@ public final class ImageBuildScreen extends Screen {
     }
 
     @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (super.mouseClicked(mx, my, button)) {
+            return true;
+        }
+        if (button == 0 && overPreview(mx, my) && S.preview < 4) {
+            previewDragging = true;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (previewDragging && button == 0) {
+            previewYaw += (float) dx * 1.2f;
+            previewPitch = Math.max(-89f, Math.min(89f, previewPitch + (float) dy * 1.2f));
+            return true;
+        }
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        if (previewDragging && button == 0) {
+            previewDragging = false;
+            return true;
+        }
+        return super.mouseReleased(mx, my, button);
+    }
+
+    @Override
     public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        if (overPreview(mx, my) && S.preview != 9 && sy != 0) {
+            previewZoom = Math.max(0.4f, Math.min(4f, previewZoom * (sy > 0 ? 1.15f : 1 / 1.15f)));
+            return true;
+        }
         if (S.tab == Tab.PREVIEW && S.preview == 9 && S.editor != null) {
             S.layer = Math.max(0, Math.min(S.editor.model().sizeY() - 1, S.layer + (sy > 0 ? 1 : -1)));
             return true;
@@ -1104,12 +1159,14 @@ public final class ImageBuildScreen extends Screen {
         }
         PhoneUploadServer.stopAll();
         textures.releaseAll();
+        meshes.clear();
         minecraft.setScreen(parent);
     }
 
     @Override
     public void removed() {
         textures.releaseAll();
+        meshes.clear();
         super.removed();
     }
 

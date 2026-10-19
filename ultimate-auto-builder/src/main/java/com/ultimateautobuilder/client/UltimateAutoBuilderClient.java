@@ -55,7 +55,12 @@ public final class UltimateAutoBuilderClient {
         modBus.addListener((RegisterColorHandlersEvent.Block e) -> AtmosphereHooks.registerBlockColors(e));
         modBus.addListener((AddPackFindersEvent e) -> TexturePack.addPackFinder(e));
         modBus.addListener((RegisterClientReloadListenersEvent e) ->
-                e.registerReloadListener((ResourceManagerReloadListener) manager -> PostEffects.invalidate()));
+                e.registerReloadListener((ResourceManagerReloadListener) manager -> {
+                    PostEffects.invalidate();
+                    // Les maillages référencent l'ancien atlas de textures.
+                    com.ultimateautobuilder.client.render.ModelPreviews.clearAll();
+                    com.ultimateautobuilder.client.render.PreviewRenderer.reset();
+                }));
         NeoForge.EVENT_BUS.addListener((RenderLevelStageEvent e) -> PostEffects.onRenderLevel(e));
         NeoForge.EVENT_BUS.addListener((ViewportEvent.ComputeFogColor e) -> AtmosphereHooks.onFogColor(e));
         NeoForge.EVENT_BUS.addListener((ViewportEvent.RenderFog e) -> AtmosphereHooks.onRenderFog(e));
