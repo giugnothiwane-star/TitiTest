@@ -1,5 +1,15 @@
 # TitiTest
 
+## VBanque — simulation bancaire fictive (par Titi)
+
+Application bancaire de démonstration créée par Titi (React + TypeScript + Vite + Tailwind, APK Android via Capacitor) : comptes, cartes virtuelles « DEMO », virements et contacts fictifs, coffres, budgets, statistiques et module complet de prêts simulés (simulateur, décision locale, échéancier, remboursements, contrepassations). **Argent et crédits entièrement fictifs**, données stockées localement.
+
+Documentation, architecture et tests : [`violetbank/README.md`](violetbank/README.md).
+
+```bash
+cd violetbank && npm install && npm run dev   # http://127.0.0.1:5180
+```
+
 ## Cercle — messagerie multi-personnages
 
 Application web complète (React + Node.js + SQLite + Socket.IO) : conversations indépendantes avec des personnages fictifs qui écrivent d'eux-mêmes, réponses à ses propres messages, brouillons par conversation, boîte mail virtuelle, notifications, mémoire par personnage et IA (Claude ou simulation locale) capable de répondre à votre place après un délai sans jamais doubler une réponse manuelle.
@@ -18,6 +28,14 @@ Documentation, compilation, tests et rapport de vérification : [`ultimate-auto-
 
 ```bash
 cd ultimate-auto-builder && ./gradlew build   # JAR dans build/libs/
+## Subway Surfers Infinite Lab
+
+Prototype autonome jouable sur ordinateur et Android (navigateur) inspiré de Subway Surfers : pièces et clés de test illimitées, ralenti 0,10× → 1,00× à chaud, enregistrement intégral d'une run et rejeu déterministe vérifié (80 tests + test navigateur), boutique, personnages, hoverboards, jetpack et toits de trains.
+
+Documentation, architecture et rapport de validation : [`subway-lab/README.md`](subway-lab/README.md).
+
+```bash
+cd subway-lab && npm start   # http://localhost:8080 — aucune dépendance
 ```
 
 ## TitiSnake

@@ -1,0 +1,181 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Palette VBanque (cahier des charges) en canaux RGB pour l'opacité Tailwind. */
+  --bg: 247 247 251; /* #F7F7FB */
+  --surface: 255 255 255;
+  --raised: 240 237 251;
+  --line: 229 226 240;
+  --ink: 16 16 20;
+  --muted: 110 110 122;
+  --brand: 118 86 246; /* #7656F6 */
+  --brand-deep: 76 50 184; /* #4C32B8 */
+  --brand-soft: 232 225 255; /* #E8E1FF */
+  --brand-ink: 76 50 184;
+  --azure: 56 189 248; /* #38BDF8 */
+  --azure-soft: 224 245 255;
+  --ok: 36 180 126; /* #24B47E */
+  --danger: 228 79 98; /* #E44F62 */
+  --warn: 243 166 66;
+  --info: 66 133 244;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: 16 16 20; /* #101014 */
+  --surface: 27 27 35; /* #1B1B23 */
+  --raised: 37 36 48;
+  --line: 48 46 62;
+  --ink: 255 255 255;
+  --muted: 146 146 157; /* #92929D */
+  --brand: 156 128 255; /* #9C80FF */
+  --brand-deep: 118 86 246;
+  --brand-soft: 45 37 84;
+  --brand-ink: 190 172 255;
+  --azure: 125 216 255; /* #7DD8FF */
+  --azure-soft: 22 52 74;
+  --ok: 46 200 140;
+  --danger: 240 106 124;
+  --warn: 245 178 90;
+  --info: 110 162 255;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    overflow-x: hidden;
+    /* Pas de rebond / pull-to-refresh du navigateur : comportement d'application native. */
+    overscroll-behavior-y: none;
+  }
+  /* Supprime le délai de double-tap et la sélection accidentelle sur les contrôles tactiles. */
+  button,
+  a,
+  [role='button'],
+  [role='tab'],
+  label {
+    touch-action: manipulation;
+  }
+  button,
+  nav a,
+  [role='tab'] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  img {
+    -webkit-user-drag: none;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--brand));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+  }
+  /* Les colonnes de grille ne doivent jamais s'élargir au contenu (graphiques, carrousels). */
+  .grid > * {
+    min-width: 0;
+  }
+  ::selection {
+    background: rgb(var(--brand) / 0.25);
+  }
+}
+
+@layer components {
+  /* Fond des écrans « hero » : violet profond éclairé de halos bleu clair, fondu vers le fond de page. */
+  .hero-bg {
+    background:
+      radial-gradient(85% 42% at 100% 0%, rgb(125 216 255 / 0.85) 0%, rgb(125 216 255 / 0) 62%),
+      radial-gradient(70% 34% at 0% 18%, rgb(56 140 255 / 0.55) 0%, rgb(56 140 255 / 0) 66%),
+      radial-gradient(60% 30% at 70% 46%, rgb(156 128 255 / 0.45) 0%, rgb(156 128 255 / 0) 70%),
+      linear-gradient(180deg, #8C7BFF 0%, #7656F6 22%, #5E42DE 42%, #4C32B8 62%, #2B1C6E 84%, rgb(var(--bg)) 100%);
+  }
+  .lock-bg {
+    background:
+      radial-gradient(90% 50% at 100% 0%, rgb(125 216 255 / 0.8) 0%, rgb(125 216 255 / 0) 60%),
+      radial-gradient(80% 40% at 0% 100%, rgb(56 189 248 / 0.45) 0%, rgb(56 189 248 / 0) 65%),
+      linear-gradient(180deg, #8C7BFF 0%, #7656F6 30%, #4C32B8 70%, #2B1C6E 100%);
+  }
+  /* Dégradé de marque violet → bleu clair (pastilles, en-têtes de prêts, QR). */
+  /* Reflet qui balaie les cartes premium. */
+  .card-shine {
+    background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.38) 47%, rgb(255 255 255 / 0.08) 53%, transparent 70%);
+    background-size: 250% 100%;
+    background-position: 120% 0;
+  }
+  .brand-gradient {
+    background-image: linear-gradient(135deg, rgb(var(--azure)) 0%, rgb(var(--brand)) 52%, rgb(var(--brand-deep)) 100%);
+  }
+  .card {
+    @apply rounded-[28px] border border-line/60 bg-surface shadow-soft;
+  }
+  .input {
+    @apply w-full rounded-2xl border border-line bg-surface px-4 py-3 text-[15px] text-ink placeholder:text-muted/70 transition focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15 disabled:opacity-60;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, rgb(var(--raised)) 0%, rgb(var(--line)) 50%, rgb(var(--raised)) 100%);
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded-xl;
+  }
+  .card-3d {
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .card-face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+}
+
+/* Réduction des mouvements : préférence système ou réglage de l'application. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+.recharts-wrapper:focus,
+.recharts-surface:focus {
+  outline: none;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
