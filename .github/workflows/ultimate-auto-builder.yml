@@ -43,6 +43,10 @@ jobs:
       - name: Compilation, tests unitaires et JAR
         run: ./gradlew build -Pneo_version=${{ steps.neo.outputs.version }} --stacktrace
 
+      - name: Sonde d'API (signatures Minecraft/NeoForge)
+        continue-on-error: true
+        run: python3 tools/api_probe.py
+
       - name: GameTests (serveur Minecraft réel)
         run: ./gradlew runGameTestServer -Pneo_version=${{ steps.neo.outputs.version }} --stacktrace
 

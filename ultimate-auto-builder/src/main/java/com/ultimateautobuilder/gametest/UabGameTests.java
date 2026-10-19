@@ -71,6 +71,25 @@ public final class UabGameTests {
         return n;
     }
 
+    /** Exemples de blocs non-air restants (diagnostic des échecs). */
+    private static String sampleNonAir(ServerLevel level, int[] b, int max) {
+        StringBuilder sb = new StringBuilder();
+        int n = 0;
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int x = b[0]; x <= b[3] && n < max; x++) {
+            for (int y = b[1]; y <= b[4] && n < max; y++) {
+                for (int z = b[2]; z <= b[5] && n < max; z++) {
+                    BlockState s = level.getBlockState(p.set(x, y, z));
+                    if (!s.isAir()) {
+                        sb.append(s).append(" @").append(x - b[0]).append(',').append(y - b[1]).append(',').append(z - b[2]).append("; ");
+                        n++;
+                    }
+                }
+            }
+        }
+        return sb.toString();
+    }
+
     /** Petite maison, construction gratuite par le serveur (aucun inventaire impliqué). */
     @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_house")
     public static void buildSmallHouse(GameTestHelper h) {
@@ -134,7 +153,8 @@ public final class UabGameTests {
             int[] b = bounds[0].clone();
             b[1] = Math.max(b[1], h.absolutePos(CENTER).getY());
             int left = countNonAir(h.getLevel(), b);
-            h.assertTrue(left == 0, left + " blocs restants après le retour arrière");
+            h.assertTrue(left == 0, left + " blocs restants après le retour arrière (" + restore[0].message() + ") : "
+                    + sampleNonAir(h.getLevel(), b, 8));
         });
     }
 
