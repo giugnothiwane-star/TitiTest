@@ -100,6 +100,23 @@ public final class ServerPayloadHandler {
                         info(player, (pause ? "Pause : " : "Reprise : ") + j.title());
                     }
                 }
+                case ActionPayload.UNLOCK -> {
+                    var r = com.ultimateautobuilder.progression.ProgressManager.unlock(player, p.arg());
+                    switch (r.status()) {
+                        case OK -> info(player, r.message());
+                        case ALREADY, FREE -> info(player, r.message());
+                        default -> error(player, r.message());
+                    }
+                }
+                case ActionPayload.CLAIM_QUEST -> {
+                    var r = com.ultimateautobuilder.progression.ProgressManager.claim(player, p.arg());
+                    if (r.status() == com.ultimateautobuilder.core.progression.PlayerProgress.ClaimStatus.OK) {
+                        info(player, r.message());
+                    } else {
+                        error(player, r.message());
+                    }
+                }
+                case ActionPayload.OPENED -> com.ultimateautobuilder.progression.ProgressManager.markOpened(player, p.target() == 1);
                 case ActionPayload.UNDO -> {
                     if (!Permissions.canBuild(player)) {
                         throw new IllegalStateException("Permission refusée");
@@ -182,6 +199,7 @@ public final class ServerPayloadHandler {
 
     /** Envoie l'état complet au joueur (ouverture du menu, après chaque action). */
     public static void sendState(ServerPlayer player) {
+        com.ultimateautobuilder.progression.ProgressManager.send(player);
         BuildManager manager = BuildManager.get();
         List<StatePayload.JobInfo> jobs = new ArrayList<>();
         List<StatePayload.HistoryInfo> history = new ArrayList<>();

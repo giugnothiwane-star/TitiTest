@@ -17,6 +17,12 @@ public record ActionPayload(int action, int target, String arg) implements Custo
     public static final int REQUEST_CUSTOM_PREVIEW = 7;
     public static final int PAUSE = 8;
     public static final int RESUME = 9;
+    /** Débloque une construction (arg : identifiant du modèle). */
+    public static final int UNLOCK = 10;
+    /** Réclame la récompense d'une quête (arg : identifiant de la quête). */
+    public static final int CLAIM_QUEST = 11;
+    /** Ouverture du cristal (cible 0) ou du catalogue (cible 1), pour les quêtes. */
+    public static final int OPENED = 12;
 
     public static final Type<ActionPayload> TYPE = new Type<>(UltimateAutoBuilderMod.id("action"));
     public static final StreamCodec<FriendlyByteBuf, ActionPayload> CODEC = StreamCodec.ofMember(ActionPayload::write, ActionPayload::read);

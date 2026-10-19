@@ -163,6 +163,9 @@ public final class BuildManager {
             throw new IllegalStateException("Modèle inconnu : " + request.modelId());
         }
         UUID owner = player == null ? null : player.getUUID();
+        if (player != null && !com.ultimateautobuilder.progression.ProgressManager.canBuild(player, entry)) {
+            throw new IllegalStateException(com.ultimateautobuilder.progression.ProgressManager.lockReason(player, entry));
+        }
         if (player != null) {
             long cooldown = ServerConfig.loaded() ? ServerConfig.REQUEST_COOLDOWN_TICKS.get() : 20;
             Long last = lastRequestTick.get(owner);
@@ -341,6 +344,11 @@ public final class BuildManager {
                 j.finish(level, this);
             } catch (RuntimeException e) {
                 UltimateAutoBuilderMod.LOGGER.error("Erreur de finalisation de la tâche {}", j.id(), e);
+            }
+            if (j instanceof PlaceJob pj && j.state() == Job.State.DONE && j.owner() != null) {
+                // Quêtes « construire » : seules les constructions menées à terme comptent.
+                com.ultimateautobuilder.progression.ProgressManager.onBuildCompleted(j.owner(), pj.entry(),
+                        server.getPlayerList().getPlayer(j.owner()));
             }
             notifyOwner(j, true);
         }

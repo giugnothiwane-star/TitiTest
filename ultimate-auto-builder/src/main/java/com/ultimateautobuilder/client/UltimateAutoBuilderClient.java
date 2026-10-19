@@ -43,6 +43,7 @@ public final class UltimateAutoBuilderClient {
         NeoForge.EVENT_BUS.addListener((RenderGuiEvent.Post e) -> ProgressHud.render(e.getGuiGraphics()));
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> {
             ClientState.reset();
+            ClientProgress.reset();
             PlacementController.stop();
             PreviewRenderer.reset();
             FrameStats.cancelBenchmark();

@@ -26,6 +26,8 @@ public final class NetworkHandler {
                         ModelUploads.onChunk(payload, sp);
                     }
                 }));
+        r.playToClient(ProgressPayload.TYPE, ProgressPayload.CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> ClientHooks.onProgress(payload)));
         r.playToClient(StatePayload.TYPE, StatePayload.CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> ClientHooks.onState(payload)));
         r.playToClient(JobProgressPayload.TYPE, JobProgressPayload.CODEC,

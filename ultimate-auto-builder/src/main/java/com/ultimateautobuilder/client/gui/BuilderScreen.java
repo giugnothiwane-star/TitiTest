@@ -56,7 +56,7 @@ public final class BuilderScreen extends ScaledScreen {
     private record Tab(String label, Category category, int special) {
     }
 
-    private static final int SPECIAL_NONE = 0, SPECIAL_ALL = 1, SPECIAL_FAVORITES = 2, SPECIAL_RECENTS = 3;
+    private static final int SPECIAL_NONE = 0, SPECIAL_ALL = 1, SPECIAL_FAVORITES = 2, SPECIAL_RECENTS = 3, SPECIAL_UNLOCKED = 4;
     private static final int CARD_W = 70, CARD_H = 80, GAP = 4, ROW_H = 22;
     private static final String[] SIZE_FILTERS = {"Toutes tailles", "Petites", "Moyennes", "Grandes"};
     private static final String[] ROTATIONS = {"0°", "90°", "180°", "270°"};
@@ -98,12 +98,60 @@ public final class BuilderScreen extends ScaledScreen {
     private int tabsY, tabsX0, tabsX1;
     private EditBox searchBox;
 
+    /** Écran d'origine (menu principal du cristal), rouvert à la fermeture. */
+    private final net.minecraft.client.gui.screens.Screen parent;
+    /** Section demandée à l'ouverture : onglet ou page à sélectionner une fois les onglets construits. */
+    private String startSection;
+
     public BuilderScreen() {
+        this(null, null);
+    }
+
+    /**
+     * @param section « houses », « sakura », « unlocked », « favorites », « history », « custom » ou null
+     */
+    public BuilderScreen(net.minecraft.client.gui.screens.Screen parent, String section) {
         super(Component.literal("Ultimate Auto Builder"));
+        this.parent = parent;
+        this.startSection = section;
         if (!initialized) {
             initialized = true;
             applyPreferences();
         }
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.ultimateautobuilder.network.ActionPayload(
+                com.ultimateautobuilder.network.ActionPayload.OPENED, 1, ""));
+    }
+
+    /** Applique la section demandée par le menu principal (après la construction des onglets). */
+    private void applyStartSection() {
+        if (startSection == null || tabs.isEmpty()) {
+            return;
+        }
+        String sec = startSection;
+        startSection = null;
+        switch (sec) {
+            case "history" -> page = Page.HISTORY;
+            case "custom" -> page = Page.CUSTOM;
+            default -> {
+                page = Page.CATALOG;
+                for (int i = 0; i < tabs.size(); i++) {
+                    Tab t = tabs.get(i);
+                    boolean match = switch (sec) {
+                        case "unlocked" -> t.special() == SPECIAL_UNLOCKED;
+                        case "favorites" -> t.special() == SPECIAL_FAVORITES;
+                        case "sakura" -> t.category() == Category.SAKURA;
+                        case "houses" -> t.category() == Category.HOUSES;
+                        default -> false;
+                    };
+                    if (match) {
+                        tabIndex = i;
+                        tabScroll = Math.max(0, i - 2);
+                        pageIndex = 0;
+                    }
+                }
+            }
+        }
+        recompute();
     }
 
     /** Reprend les préférences sauvegardées (taille, orientation, mode, position…). */
@@ -156,6 +204,7 @@ public final class BuilderScreen extends ScaledScreen {
         view = c;
         buildTabs();
         recompute();
+        applyStartSection();
     }
 
     /** Entrée locale pour un modèle personnalisé du serveur ; mêmes tailles que côté serveur. */
@@ -178,6 +227,7 @@ public final class BuilderScreen extends ScaledScreen {
         tabs.add(new Tab("Tout (" + view.size() + ")", null, SPECIAL_ALL));
         tabs.add(new Tab("★ Favoris", null, SPECIAL_FAVORITES));
         tabs.add(new Tab("Récents", null, SPECIAL_RECENTS));
+        tabs.add(new Tab("Débloquées", null, SPECIAL_UNLOCKED));
         for (Category c : Category.values()) {
             tabs.add(new Tab(c.displayName() + " (" + view.count(c) + ")", c, SPECIAL_NONE));
         }
@@ -199,6 +249,10 @@ public final class BuilderScreen extends ScaledScreen {
             List<String> ids = tab.special() == SPECIAL_FAVORITES ? ClientData.get().favorites : ClientData.get().recents;
             Predicate<ModelEntry> in = Catalog.idIn(new HashSet<>(ids));
             filter = filter == null ? in : filter.and(in);
+        }
+        if (tab.special() == SPECIAL_UNLOCKED) {
+            Predicate<ModelEntry> open = com.ultimateautobuilder.client.ClientProgress::isUnlocked;
+            filter = filter == null ? open : filter.and(open);
         }
         List<ModelEntry> found = view.search(query, tab.category(), filter, sort);
         if (tab.special() == SPECIAL_RECENTS && query.isBlank()) {
@@ -488,10 +542,28 @@ public final class BuilderScreen extends ScaledScreen {
                 .build()));
         y += ROW_H;
         StatePayload st = ClientState.state();
+        boolean unlockedEntry = com.ultimateautobuilder.client.ClientProgress.isUnlocked(e);
+        if (!unlockedEntry) {
+            // Déblocage : le serveur vérifie le niveau et retire les matériaux une seule fois.
+            var rule = com.ultimateautobuilder.core.progression.ProgressionRules.rule(e);
+            boolean tierOk = com.ultimateautobuilder.client.ClientProgress.tier().atLeast(rule.tier());
+            Button unlock = Button.builder(Component.literal("§eDébloquer"), b -> {
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.ultimateautobuilder.network.ActionPayload(
+                        com.ultimateautobuilder.network.ActionPayload.UNLOCK, 0, e.id()));
+                b.active = false;
+            }).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal("Niveau : " + rule.tier().label + "\nCoût unique : "
+                    + com.ultimateautobuilder.core.progression.ProgressionRules.describe(rule.cost())
+                    + (tierOk ? "" : "\n§cNiveau insuffisant : avancez dans les quêtes du cristal")))).build();
+            unlock.active = tierOk;
+            controls.add(addRenderableWidget(unlock));
+            y += ROW_H;
+        }
         Button build = Button.builder(Component.literal("§lCONSTRUIRE"), b -> PlacementController.requestBuild(minecraft, this))
                 .bounds(x, y, w, 20).build();
-        build.active = st == null || st.canBuild();
-        if (!build.active) {
+        build.active = (st == null || st.canBuild()) && unlockedEntry;
+        if (!unlockedEntry) {
+            build.setTooltip(Tooltip.create(Component.literal("Construction verrouillée : débloquez-la d'abord")));
+        } else if (!build.active) {
             build.setTooltip(Tooltip.create(Component.literal("Vous n'avez pas la permission de construire sur ce serveur")));
         }
         controls.add(addRenderableWidget(build));
@@ -712,6 +784,16 @@ public final class BuilderScreen extends ScaledScreen {
             }
             ClientModels.request(s.entry, s.size(), s.hollow);
         }
+    }
+
+    private static String tierShort(com.ultimateautobuilder.core.progression.Tier t) {
+        return switch (t) {
+            case DEBUTANT -> "Débutant";
+            case PIERRE -> "Pierre";
+            case FER -> "Fer";
+            case DIAMANT -> "Diamant";
+            case NETHERITE -> "Netherite";
+        };
     }
 
     private static String sizeLabel(ModelEntry e) {
@@ -1096,7 +1178,16 @@ public final class BuilderScreen extends ScaledScreen {
         if (before != viewVersion && (page != Page.CATALOG || canBuild != lastCanBuild || selected() == null && selectedId != null)) {
             rebuildWidgets();
         }
+        // Déblocage ou quête validée par le serveur : verrous et boutons à jour.
+        long pv = com.ultimateautobuilder.client.ClientProgress.version();
+        if (pv != progressVersion) {
+            progressVersion = pv;
+            recompute();
+            rebuildWidgets();
+        }
     }
+
+    private long progressVersion = com.ultimateautobuilder.client.ClientProgress.version();
 
     @Override
     public boolean isPauseScreen() {
@@ -1106,7 +1197,11 @@ public final class BuilderScreen extends ScaledScreen {
     @Override
     public void onClose() {
         ClientData.save();
-        super.onClose();
+        if (parent != null) {
+            minecraft.setScreen(parent);
+        } else {
+            super.onClose();
+        }
     }
 
     // ------------------------------------------------------------------ rendu
@@ -1204,6 +1299,13 @@ public final class BuilderScreen extends ScaledScreen {
             if (ClientData.isFavorite(e.id())) {
                 g.drawString(font, "★", x + CARD_W - 9, y + 2, 0xFFFFD040, true);
             }
+            if (!com.ultimateautobuilder.client.ClientProgress.isUnlocked(e)) {
+                // Construction verrouillée : voile et niveau requis.
+                var rule = com.ultimateautobuilder.core.progression.ProgressionRules.rule(e);
+                g.fill(x + 1, y + 1, x + CARD_W - 1, y + CARD_H - 23, 0x90101018);
+                g.drawCenteredString(font, "§6Verrouillée", x + CARD_W / 2, y + 16, 0xFFFFFFFF);
+                g.drawCenteredString(font, "§7" + tierShort(rule.tier()), x + CARD_W / 2, y + 28, 0xFFFFFFFF);
+            }
             // Nom sur deux lignes au plus ; le nom complet s'affiche au survol.
             java.util.List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(e.name()), CARD_W - 4);
             for (int l = 0; l < Math.min(2, lines.size()); l++) {
@@ -1270,8 +1372,14 @@ public final class BuilderScreen extends ScaledScreen {
         }
         int y = panelY + thumbSize + 2;
         g.drawString(font, font.plainSubstrByWidth("§l" + e.name(), panelW - 8), panelX + 4, y, 0xFFFFFFFF);
-        g.drawString(font, font.plainSubstrByWidth(e.category().displayName() + " · complexité " + e.complexity() + "/5", panelW - 8), panelX + 4, y + 11,
-                0xFF99AABB, false);
+        String info;
+        if (com.ultimateautobuilder.client.ClientProgress.isUnlocked(e)) {
+            info = e.category().displayName() + " · complexité " + e.complexity() + "/5";
+        } else {
+            var rule = com.ultimateautobuilder.core.progression.ProgressionRules.rule(e);
+            info = "§6Verrouillée§7 · " + tierShort(rule.tier()) + " · " + com.ultimateautobuilder.core.progression.ProgressionRules.describe(rule.cost());
+        }
+        g.drawString(font, font.plainSubstrByWidth(info, panelW - 8), panelX + 4, y + 11, 0xFF99AABB, false);
         VoxelModel m = ClientModels.now(e, s.size(), s.hollow);
         String dims;
         if (m == null) {

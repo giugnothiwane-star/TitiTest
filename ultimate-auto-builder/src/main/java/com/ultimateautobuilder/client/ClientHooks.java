@@ -104,6 +104,10 @@ public final class ClientHooks {
         ClientState.onProgress(payload);
     }
 
+    public static void onProgress(com.ultimateautobuilder.network.ProgressPayload payload) {
+        ClientProgress.set(payload);
+    }
+
     public static void onCustomPreview(SimplePayloads.CustomPreview payload) {
         ClientState.putCustomPreview(payload.id(), payload.data());
         ThumbnailCache.invalidate(payload.id());
