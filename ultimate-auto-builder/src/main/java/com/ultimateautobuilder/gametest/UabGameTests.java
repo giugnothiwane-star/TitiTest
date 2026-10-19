@@ -71,25 +71,6 @@ public final class UabGameTests {
         return n;
     }
 
-    /** Exemples de blocs non-air restants (diagnostic des échecs). */
-    private static String sampleNonAir(ServerLevel level, int[] b, int max) {
-        StringBuilder sb = new StringBuilder();
-        int n = 0;
-        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int x = b[0]; x <= b[3] && n < max; x++) {
-            for (int y = b[1]; y <= b[4] && n < max; y++) {
-                for (int z = b[2]; z <= b[5] && n < max; z++) {
-                    BlockState s = level.getBlockState(p.set(x, y, z));
-                    if (!s.isAir()) {
-                        sb.append(s).append(" @").append(x - b[0]).append(',').append(y - b[1]).append(',').append(z - b[2]).append("; ");
-                        n++;
-                    }
-                }
-            }
-        }
-        return sb.toString();
-    }
-
     /** Petite maison, construction gratuite par le serveur (aucun inventaire impliqué). */
     @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_house")
     public static void buildSmallHouse(GameTestHelper h) {
@@ -134,9 +115,22 @@ public final class UabGameTests {
         h.succeedWhen(() -> h.assertTrue(job.state() == Job.State.CANCELLED, "État attendu CANCELLED, obtenu " + job.state()));
     }
 
-    /** Construction puis retour arrière : la zone doit redevenir vide. */
+    /** Construction puis retour arrière : la zone doit retrouver exactement son état initial. */
     @GameTest(template = TEMPLATE, timeoutTicks = 2400, batch = "uab_undo")
     public static void undoBuild(GameTestHelper h) {
+        // Instantané du gabarit avant construction (le sol du gabarit peut se trouver dans l'emprise).
+        ServerLevel level = h.getLevel();
+        BlockPos origin = h.absolutePos(BlockPos.ZERO);
+        int size = 48;
+        BlockState[] before = new BlockState[size * size * size];
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int x = 0; x < size; x++) {
+            for (int y = 0; y < size; y++) {
+                for (int z = 0; z < size; z++) {
+                    before[(x * size + y) * size + z] = level.getBlockState(p.set(origin.getX() + x, origin.getY() + y, origin.getZ() + z));
+                }
+            }
+        }
         PlaceJob job = submit(h, request(h, "maison_pierre", SizePreset.CUSTOM, 9, 0, BuildMode.NORMAL));
         RestoreJob[] restore = new RestoreJob[1];
         int[][] bounds = new int[1][];
@@ -149,12 +143,28 @@ public final class UabGameTests {
         h.succeedWhen(() -> {
             h.assertTrue(job.state() != Job.State.FAILED, "Échec : " + job.message());
             h.assertTrue(restore[0] != null && restore[0].state() == Job.State.DONE, "Retour arrière en cours");
-            // Le sol du gabarit (y = 0) est sous l'ancrage : seuls des blocs d'air doivent rester au-dessus.
-            int[] b = bounds[0].clone();
-            b[1] = Math.max(b[1], h.absolutePos(CENTER).getY());
-            int left = countNonAir(h.getLevel(), b);
-            h.assertTrue(left == 0, left + " blocs restants après le retour arrière (" + restore[0].message() + ") : "
-                    + sampleNonAir(h.getLevel(), b, 8));
+            int[] b = bounds[0];
+            int left = 0;
+            StringBuilder sample = new StringBuilder();
+            BlockPos.MutableBlockPos q = new BlockPos.MutableBlockPos();
+            for (int x = b[0]; x <= b[3]; x++) {
+                for (int y = b[1]; y <= b[4]; y++) {
+                    for (int z = b[2]; z <= b[5]; z++) {
+                        int rx = x - origin.getX(), ry = y - origin.getY(), rz = z - origin.getZ();
+                        BlockState s = level.getBlockState(q.set(x, y, z));
+                        boolean inside = rx >= 0 && ry >= 0 && rz >= 0 && rx < size && ry < size && rz < size;
+                        boolean ok = inside ? s == before[(rx * size + ry) * size + rz] : s.isAir();
+                        if (!ok) {
+                            if (left < 8) {
+                                sample.append(s).append(" @").append(rx).append(',').append(ry).append(',').append(rz).append("; ");
+                            }
+                            left++;
+                        }
+                    }
+                }
+            }
+            // Le mode prudent laisse volontairement en place les blocs modifiés depuis la construction.
+            h.assertTrue(left <= restore[0].conflicts(), left + " blocs différents de l'état initial après le retour arrière (" + restore[0].message() + ") : " + sample);
         });
     }
 

@@ -43,6 +43,12 @@ jobs:
       - name: Compilation, tests unitaires et JAR
         run: ./gradlew build -Pneo_version=${{ steps.neo.outputs.version }} --stacktrace
 
+      - name: JAR du mod
+        uses: actions/upload-artifact@v4
+        with:
+          name: ultimate-auto-builder-jar
+          path: ultimate-auto-builder/build/libs/*.jar
+
       - name: Sonde d'API (signatures Minecraft/NeoForge)
         continue-on-error: true
         run: python3 tools/api_probe.py
@@ -59,9 +65,3 @@ jobs:
             ultimate-auto-builder/run/logs/
             ultimate-auto-builder/run/gametestserver/logs/
           if-no-files-found: ignore
-
-      - name: JAR du mod
-        uses: actions/upload-artifact@v4
-        with:
-          name: ultimate-auto-builder-jar
-          path: ultimate-auto-builder/build/libs/*.jar

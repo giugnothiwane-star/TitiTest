@@ -52,6 +52,10 @@ public final class RestoreJob extends Job {
         return targetId;
     }
 
+    public int conflicts() {
+        return conflicts;
+    }
+
     @Override
     public int total() {
         return record.size();
