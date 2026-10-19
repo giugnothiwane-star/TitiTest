@@ -436,6 +436,28 @@ public final class BuilderScreen extends ScaledScreen {
         controlsTop = panelY + thumbSize + textH + 4;
         int y = controlsTop - detailScroll;
 
+        // Construction verrouillée : le déblocage passe en tête, visible sans faire défiler.
+        boolean unlockedEntry = com.ultimateautobuilder.client.ClientProgress.isUnlocked(e);
+        if (!unlockedEntry) {
+            // Déblocage : le serveur vérifie le niveau et retire les matériaux une seule fois.
+            var rule = com.ultimateautobuilder.core.progression.ProgressionRules.rule(e);
+            boolean tierOk = com.ultimateautobuilder.client.ClientProgress.tier().atLeast(rule.tier());
+            // Confirmation explicite : le coût unique est rappelé avant tout retrait de matériaux.
+            Button unlock = Button.builder(Component.literal(tierOk ? "§eDébloquer : " + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost()) : "§7Niveau requis : " + rule.tier().label), b -> minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(yes -> {
+                if (yes) {
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.ultimateautobuilder.network.ActionPayload(
+                            com.ultimateautobuilder.network.ActionPayload.UNLOCK, 0, e.id()));
+                }
+                minecraft.setScreen(this);
+            }, Component.literal("Débloquer « " + e.name() + " » ?"), Component.literal("Coût unique retiré de votre inventaire : "
+                    + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost())
+                    + "\nCe coût est distinct des blocs nécessaires à la construction.")))).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal("Niveau : " + rule.tier().label + "\nCoût unique : "
+                    + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost())
+                    + (tierOk ? "" : "\n§cNiveau insuffisant : avancez dans les quêtes du cristal")))).build();
+            unlock.active = tierOk;
+            controls.add(addRenderableWidget(unlock));
+            y += ROW_H;
+        }
         controls.add(addRenderableWidget(Button.builder(Component.literal(sizeLabel(e)), b -> {
             cycleSize(1);
             rebuildWidgets();
@@ -542,27 +564,6 @@ public final class BuilderScreen extends ScaledScreen {
                 .build()));
         y += ROW_H;
         StatePayload st = ClientState.state();
-        boolean unlockedEntry = com.ultimateautobuilder.client.ClientProgress.isUnlocked(e);
-        if (!unlockedEntry) {
-            // Déblocage : le serveur vérifie le niveau et retire les matériaux une seule fois.
-            var rule = com.ultimateautobuilder.core.progression.ProgressionRules.rule(e);
-            boolean tierOk = com.ultimateautobuilder.client.ClientProgress.tier().atLeast(rule.tier());
-            // Confirmation explicite : le coût unique est rappelé avant tout retrait de matériaux.
-            Button unlock = Button.builder(Component.literal("§eDébloquer"), b -> minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(yes -> {
-                if (yes) {
-                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.ultimateautobuilder.network.ActionPayload(
-                            com.ultimateautobuilder.network.ActionPayload.UNLOCK, 0, e.id()));
-                }
-                minecraft.setScreen(this);
-            }, Component.literal("Débloquer « " + e.name() + " » ?"), Component.literal("Coût unique retiré de votre inventaire : "
-                    + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost())
-                    + "\nCe coût est distinct des blocs nécessaires à la construction.")))).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal("Niveau : " + rule.tier().label + "\nCoût unique : "
-                    + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost())
-                    + (tierOk ? "" : "\n§cNiveau insuffisant : avancez dans les quêtes du cristal")))).build();
-            unlock.active = tierOk;
-            controls.add(addRenderableWidget(unlock));
-            y += ROW_H;
-        }
         Button build = Button.builder(Component.literal("§lCONSTRUIRE"), b -> PlacementController.requestBuild(minecraft, this))
                 .bounds(x, y, w, 20).build();
         build.active = (st == null || st.canBuild()) && unlockedEntry;

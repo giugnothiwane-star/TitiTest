@@ -260,6 +260,32 @@ public final class CaptureRunner {
                 wait = 10;
             }
             case 29 -> {
+                // Parcours réel de déblocage : quêtes validées et matériaux fournis côté serveur, puis clics dans l'interface.
+                prepareUnlock(mc);
+                mc.setScreen(new BuilderScreen(null, "sakura"));
+                wait = 100;
+            }
+            case 30 -> {
+                if (mc.screen instanceof BuilderScreen s) {
+                    s.captureSelect("sakura_minka_tradition");
+                }
+                wait = 200;
+            }
+            case 31 -> {
+                shot(mc, "19_deblocage_disponible");
+                press(mc, b -> b.getMessage().getString().contains("Débloquer"));
+                wait = 40;
+            }
+            case 32 -> {
+                shot(mc, "20_deblocage_confirmation");
+                press(mc, b -> b.getMessage().equals(net.minecraft.network.chat.CommonComponents.GUI_YES));
+                wait = 120;
+            }
+            case 33 -> {
+                shot(mc, "21_deblocage_effectue");
+                wait = 10;
+            }
+            case 34 -> {
                 // Maison Sakura de départ construite dans le monde, cristal en main.
                 mc.setScreen(null);
                 selectCrystal(mc);
@@ -269,17 +295,17 @@ public final class CaptureRunner {
                 mc.player.setXRot(15f);
                 wait = 300;
             }
-            case 30 -> {
+            case 35 -> {
                 PlacementController.requestBuild(mc, null);
                 wait = 500;
             }
-            case 31 -> {
+            case 36 -> {
                 PlacementController.stop();
                 stepBack(mc, 14, 3);
                 wait = 80;
             }
-            case 32 -> {
-                shot(mc, "19_sakura_construite");
+            case 37 -> {
+                shot(mc, "22_sakura_construite");
                 wait = 10;
             }
             default -> {
@@ -319,6 +345,50 @@ public final class CaptureRunner {
                 }
                 UltimateAutoBuilderMod.LOGGER.info("Capture : joueur en survie (progression appliquée)");
             }
+        });
+    }
+
+    /** Appuie sur le premier bouton de l'écran courant qui correspond. */
+    private static void press(Minecraft mc, java.util.function.Predicate<net.minecraft.client.gui.components.Button> match) {
+        if (mc.screen == null) {
+            UltimateAutoBuilderMod.LOGGER.warn("Capture : aucun écran ouvert");
+            return;
+        }
+        for (var child : mc.screen.children()) {
+            if (child instanceof net.minecraft.client.gui.components.Button b && b.active && match.test(b)) {
+                UltimateAutoBuilderMod.LOGGER.info("Capture : appui sur « {} »", b.getMessage().getString());
+                b.onPress();
+                return;
+            }
+        }
+        UltimateAutoBuilderMod.LOGGER.warn("Capture : bouton introuvable sur {}", mc.screen.getClass().getSimpleName());
+    }
+
+    /**
+     * Fait atteindre le niveau « pierre » par le chemin normal (statistique de minage réelle,
+     * réclamation des quêtes) et donne le coût exact de la minka : 16 bûches de cerisier, 32 pierres.
+     */
+    private static void prepareUnlock(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        if (server == null) {
+            return;
+        }
+        java.util.UUID id = mc.player.getUUID();
+        server.execute(() -> {
+            var sp = server.getPlayerList().getPlayer(id);
+            if (sp == null) {
+                return;
+            }
+            sp.awardStat(net.minecraft.stats.Stats.BLOCK_MINED.get(net.minecraft.world.level.block.Blocks.STONE), 64);
+            com.ultimateautobuilder.progression.ProgressManager.markOpened(sp, false);
+            com.ultimateautobuilder.progression.ProgressManager.markOpened(sp, true);
+            for (String q : new String[]{"decouverte", "catalogue", "premiere_maison", "pierre"}) {
+                var r = com.ultimateautobuilder.progression.ProgressManager.claim(sp, q);
+                UltimateAutoBuilderMod.LOGGER.info("Capture : quête {} → {} ({})", q, r.status(), r.message());
+            }
+            sp.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHERRY_LOG, 16));
+            sp.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 32));
+            com.ultimateautobuilder.progression.ProgressManager.send(sp);
         });
     }
 
