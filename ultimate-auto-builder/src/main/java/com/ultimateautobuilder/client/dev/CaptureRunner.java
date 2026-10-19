@@ -275,6 +275,10 @@ public final class CaptureRunner {
             }
             case 31 -> {
                 PlacementController.stop();
+                stepBack(mc, 14, 3);
+                wait = 80;
+            }
+            case 32 -> {
                 shot(mc, "19_sakura_construite");
                 wait = 10;
             }
@@ -309,7 +313,29 @@ public final class CaptureRunner {
             var sp = server.getPlayerList().getPlayer(id);
             if (sp != null) {
                 sp.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                // Monde de capture issu des GameTests (remise à la connexion désactivée dans sa configuration) : cristal donné ici.
+                if (!sp.getInventory().hasAnyMatching(st -> st.is(com.ultimateautobuilder.registry.ModItems.ULTIMATE_CRYSTAL.get()))) {
+                    sp.getInventory().add(new net.minecraft.world.item.ItemStack(com.ultimateautobuilder.registry.ModItems.ULTIMATE_CRYSTAL.get()));
+                }
                 UltimateAutoBuilderMod.LOGGER.info("Capture : joueur en survie (progression appliquée)");
+            }
+        });
+    }
+
+    /** Recule le joueur (téléportation serveur) pour cadrer toute la construction. */
+    private static void stepBack(Minecraft mc, double back, double up) {
+        var server = mc.getSingleplayerServer();
+        if (server == null) {
+            return;
+        }
+        java.util.UUID id = mc.player.getUUID();
+        float yaw = mc.player.getYRot();
+        server.execute(() -> {
+            var sp = server.getPlayerList().getPlayer(id);
+            if (sp != null) {
+                double rad = Math.toRadians(yaw);
+                double dx = Math.sin(rad) * back, dz = -Math.cos(rad) * back;
+                sp.connection.teleport(sp.getX() + dx, sp.getY() + up, sp.getZ() + dz, yaw, 20f);
             }
         });
     }

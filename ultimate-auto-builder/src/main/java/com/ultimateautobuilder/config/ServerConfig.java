@@ -113,7 +113,7 @@ public final class ServerConfig {
         b.comment("Permissions").push("permissions");
         PERMISSION_LEVEL = b.comment("Niveau d'opérateur requis pour construire (0 = tout le monde)").defineInRange("permissionLevel", 2, 0, 4);
         SINGLEPLAYER_ALWAYS_ALLOWED = b.define("singleplayerAlwaysAllowed", true);
-        GIVE_CRYSTAL_ON_FIRST_JOIN = b.define("giveCrystalOnFirstJoin", false);
+        GIVE_CRYSTAL_ON_FIRST_JOIN = b.define("giveCrystalOnFirstJoin", true);
         b.pop();
 
         b.comment("Progression : niveaux d'architecte, quêtes et déblocage des constructions par matériaux").push("progression");

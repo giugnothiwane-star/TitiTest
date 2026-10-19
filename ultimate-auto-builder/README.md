@@ -52,7 +52,7 @@ Clic droit avec le cristal (ou touche **B**, ou **R1** à la manette) : ouvertur
 
 1. *Create Custom Profile* → Minecraft **1.21.1** → chargeur **NeoForge** (21.1.x).
 2. Sur le profil : **⋯** → *Open Folder* → dossier `mods/` → y copier `ultimateautobuilder-1.0.0.jar`.
-3. Lancer le profil. L'Ultimate Crystal est dans l'onglet créatif « Ultimate Auto Builder » ; en survie, il est donné à la première connexion et se fabrique (pétales roses, 3 éclats d'améthyste, 1 diamant).
+3. Lancer le profil. L'Ultimate Crystal est dans l'onglet créatif « Ultimate Auto Builder » ; en survie, il est donné à la première connexion (`giveCrystalOnFirstJoin`, activé par défaut) et se fabrique (pétales roses, 3 éclats d'améthyste, 1 diamant).
 
 **Sans CurseForge** : installer NeoForge 21.1.x pour Minecraft 1.21.1 (neoforged.net) puis copier le JAR dans `mods/`.
 

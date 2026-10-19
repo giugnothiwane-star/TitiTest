@@ -8,9 +8,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-/** Remise unique du Cristal de Glace à la première connexion (option) et nettoyage à la déconnexion. */
+/** Remise unique de l'Ultimate Crystal à la première connexion (option) et nettoyage à la déconnexion. */
 public final class PlayerJoinHandler {
-    private static final String TAG = UltimateAutoBuilderMod.MOD_ID + ":crystal_given";
+    // Nouvelle étiquette : les joueurs qui avaient reçu l'ancien Cristal de Glace reçoivent une fois l'Ultimate Crystal.
+    private static final String TAG = UltimateAutoBuilderMod.MOD_ID + ":ultimate_crystal_given";
 
     private PlayerJoinHandler() {
     }
