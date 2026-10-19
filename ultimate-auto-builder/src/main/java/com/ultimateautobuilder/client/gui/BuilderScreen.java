@@ -547,12 +547,17 @@ public final class BuilderScreen extends ScaledScreen {
             // Déblocage : le serveur vérifie le niveau et retire les matériaux une seule fois.
             var rule = com.ultimateautobuilder.core.progression.ProgressionRules.rule(e);
             boolean tierOk = com.ultimateautobuilder.client.ClientProgress.tier().atLeast(rule.tier());
-            Button unlock = Button.builder(Component.literal("§eDébloquer"), b -> {
-                net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.ultimateautobuilder.network.ActionPayload(
-                        com.ultimateautobuilder.network.ActionPayload.UNLOCK, 0, e.id()));
-                b.active = false;
-            }).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal("Niveau : " + rule.tier().label + "\nCoût unique : "
-                    + com.ultimateautobuilder.core.progression.ProgressionRules.describe(rule.cost())
+            // Confirmation explicite : le coût unique est rappelé avant tout retrait de matériaux.
+            Button unlock = Button.builder(Component.literal("§eDébloquer"), b -> minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(yes -> {
+                if (yes) {
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.ultimateautobuilder.network.ActionPayload(
+                            com.ultimateautobuilder.network.ActionPayload.UNLOCK, 0, e.id()));
+                }
+                minecraft.setScreen(this);
+            }, Component.literal("Débloquer « " + e.name() + " » ?"), Component.literal("Coût unique retiré de votre inventaire : "
+                    + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost())
+                    + "\nCe coût est distinct des blocs nécessaires à la construction.")))).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal("Niveau : " + rule.tier().label + "\nCoût unique : "
+                    + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost())
                     + (tierOk ? "" : "\n§cNiveau insuffisant : avancez dans les quêtes du cristal")))).build();
             unlock.active = tierOk;
             controls.add(addRenderableWidget(unlock));
@@ -1377,7 +1382,7 @@ public final class BuilderScreen extends ScaledScreen {
             info = e.category().displayName() + " · complexité " + e.complexity() + "/5";
         } else {
             var rule = com.ultimateautobuilder.core.progression.ProgressionRules.rule(e);
-            info = "§6Verrouillée§7 · " + tierShort(rule.tier()) + " · " + com.ultimateautobuilder.core.progression.ProgressionRules.describe(rule.cost());
+            info = "§6Verrouillée§7 · " + tierShort(rule.tier()) + " · " + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost());
         }
         g.drawString(font, font.plainSubstrByWidth(info, panelW - 8), panelX + 4, y + 11, 0xFF99AABB, false);
         VoxelModel m = ClientModels.now(e, s.size(), s.hollow);

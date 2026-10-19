@@ -192,7 +192,7 @@ public final class HubScreen extends ScaledScreen {
             labels.add((c == Category.SAKURA ? "§d✿ " : "") + c.displayName() + " (" + n[1] + "/" + n[0] + ")");
             tips.add(n[1] + " construction(s) accessibles sur " + n[0]);
         }
-        buttonGrid(mainY + 26 + CARD + 18, columns(), labels, tips, i -> open(new BuilderScreen(this, "cat:" + order.get(i).key())));
+        buttonGrid(mainY + CARD + 55, columns(), labels, tips, i -> open(new BuilderScreen(this, "cat:" + order.get(i).key())));
         addAction("Catalogue complet", () -> open(new BuilderScreen(this, "houses")));
     }
 
@@ -424,8 +424,8 @@ public final class HubScreen extends ScaledScreen {
 
     private void renderHouses(GuiGraphics g, int mx, int my) {
         g.drawString(font, "§d✿ Collection Sakura §7— cliquez pour ouvrir le catalogue", mainX + 6, mainY + 18, 0xFFFFFFFF, false);
-        cards(g, mx, my, DefaultCatalog.shared().byCategory(Category.SAKURA), mainY + 30, "sakura");
-        g.drawString(font, "§7Catégories (accessibles / total) :", mainX + 6, mainY + 30 + CARD + 6, 0xFFFFFFFF, false);
+        cards(g, mx, my, DefaultCatalog.shared().byCategory(Category.SAKURA), mainY + 28, "sakura");
+        g.drawString(font, "§7Catégories (accessibles / total) :", mainX + 6, mainY + CARD + 43, 0xFFFFFFFF, false);
     }
 
     private void renderShaders(GuiGraphics g) {
@@ -564,8 +564,8 @@ public final class HubScreen extends ScaledScreen {
                 break;
             }
             List<ItemCost> miss = PlayerProgress.missing(ProgressionRules.rule(e).cost(), mi);
-            String status = miss.isEmpty() ? "§a✔ matériaux suffisants" : "§cmanque " + ProgressionRules.describe(miss);
-            g.drawString(font, font.plainSubstrByWidth("§f" + e.name() + " §7— " + ProgressionRules.describe(ProgressionRules.rule(e).cost()) + " — " + status,
+            String status = miss.isEmpty() ? "§a✔ matériaux suffisants" : "§cmanque " + ClientProgress.describe(miss);
+            g.drawString(font, font.plainSubstrByWidth("§f" + e.name() + " §7— " + ClientProgress.describe(ProgressionRules.rule(e).cost()) + " — " + status,
                     mainW - 12), mainX + 6, y, 0xFFFFFFFF, false);
             y += 11;
             shown++;

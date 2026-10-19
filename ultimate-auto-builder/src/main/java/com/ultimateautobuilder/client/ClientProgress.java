@@ -68,6 +68,21 @@ public final class ClientProgress {
         return r.free() || unlocked.contains(e.id());
     }
 
+    /** Coût lisible dans la langue du jeu (« 16 Bûche de cerisier, 32 Pierre taillée »). */
+    public static String describe(List<com.ultimateautobuilder.core.progression.ItemCost> cost) {
+        if (cost.isEmpty()) {
+            return "gratuit";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (var c : cost) {
+            var rl = net.minecraft.resources.ResourceLocation.tryParse(c.item());
+            String name = rl != null && net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(rl)
+                    ? net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl).getDescription().getString() : c.shortName();
+            sb.append(sb.isEmpty() ? "" : ", ").append(c.count()).append(' ').append(name);
+        }
+        return sb.toString();
+    }
+
     public static List<ProgressPayload.QuestInfo> quests() {
         return last == null ? List.of() : last.quests();
     }
