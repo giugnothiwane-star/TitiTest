@@ -111,7 +111,7 @@ public final class UabCommand {
 
     private static int give(CommandSourceStack src, Collection<ServerPlayer> targets) {
         for (ServerPlayer p : targets) {
-            ItemStack stack = new ItemStack(ModItems.ICE_CRYSTAL.get());
+            ItemStack stack = new ItemStack(ModItems.ULTIMATE_CRYSTAL.get());
             if (!p.getInventory().add(stack)) {
                 p.drop(stack, false);
             }

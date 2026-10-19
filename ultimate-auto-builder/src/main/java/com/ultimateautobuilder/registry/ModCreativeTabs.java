@@ -13,11 +13,8 @@ public final class ModCreativeTabs {
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = TABS.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.ultimateautobuilder"))
-            .icon(() -> new ItemStack(ModItems.ICE_CRYSTAL.get()))
-            .displayItems((params, output) -> {
-                output.accept(ModItems.ICE_CRYSTAL.get());
-                output.accept(ModItems.VISUAL_CRYSTAL.get());
-            })
+            .icon(() -> new ItemStack(ModItems.ULTIMATE_CRYSTAL.get()))
+            .displayItems((params, output) -> output.accept(ModItems.ULTIMATE_CRYSTAL.get()))
             .build());
 
     private ModCreativeTabs() {

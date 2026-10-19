@@ -141,7 +141,7 @@ public final class BuilderScreen extends ScaledScreen {
                         case "favorites" -> t.special() == SPECIAL_FAVORITES;
                         case "sakura" -> t.category() == Category.SAKURA;
                         case "houses" -> t.category() == Category.HOUSES;
-                        default -> false;
+                        default -> sec.startsWith("cat:") && t.category() != null && t.category().key().equals(sec.substring(4));
                     };
                     if (match) {
                         tabIndex = i;

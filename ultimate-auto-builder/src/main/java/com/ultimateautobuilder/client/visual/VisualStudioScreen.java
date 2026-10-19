@@ -67,6 +67,17 @@ public final class VisualStudioScreen extends Screen {
         this.parent = parent;
     }
 
+    /** Ouvre directement une section (index dans {@link #SECTIONS}), par exemple depuis le hub du cristal. */
+    public VisualStudioScreen(Screen parent, String sectionName) {
+        this(parent);
+        for (int i = 0; i < SECTIONS.length; i++) {
+            if (SECTIONS[i].equals(sectionName)) {
+                section = i;
+                scroll = 0;
+            }
+        }
+    }
+
     private VisualProfile p() {
         return VisualStore.current();
     }
@@ -288,7 +299,7 @@ public final class VisualStudioScreen extends Screen {
                             changed();
                             rebuildWidgets();
                         }).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal(
-                                "Performance : 1 passe ; Équilibré : + vignette et netteté ; Élevé : + halo ; Ultra : halo large en 2 itérations")))
+                                "Performance : 1 passe ; Équilibré : + vignette et netteté ; Qualité : + halo ; Ultra : halo large en 2 itérations")))
                                 .build());
                     }
                 });
@@ -400,7 +411,7 @@ public final class VisualStudioScreen extends Screen {
                 }
                 rows.add(slider("Vignette", 0, 1, () -> p.vignette, v -> p.vignette = v.floatValue(), "%.2f"));
                 rows.add(slider("Netteté", 0, 1, () -> p.sharpen, v -> p.sharpen = v.floatValue(), "%.2f"));
-                rows.add(slider("Halo (bloom) — qualités Élevé et Ultra", 0, 1.5, () -> p.bloomStrength, v -> p.bloomStrength = v.floatValue(), "%.2f"));
+                rows.add(slider("Halo (bloom) — qualités Qualité et Ultra", 0, 1.5, () -> p.bloomStrength, v -> p.bloomStrength = v.floatValue(), "%.2f"));
                 rows.add(slider("Seuil du halo", 0.3, 0.98, () -> p.bloomThreshold, v -> p.bloomThreshold = v.floatValue(), "%.2f"));
                 rows.add(button("", "Recompiler les shaders", () -> {
                     PostEffects.invalidate();

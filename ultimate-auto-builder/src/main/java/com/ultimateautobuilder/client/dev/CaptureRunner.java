@@ -3,6 +3,7 @@ package com.ultimateautobuilder.client.dev;
 import com.ultimateautobuilder.UltimateAutoBuilderMod;
 import com.ultimateautobuilder.client.PlacementController;
 import com.ultimateautobuilder.client.gui.BuilderScreen;
+import com.ultimateautobuilder.client.gui.HubScreen;
 import com.ultimateautobuilder.client.image.ImageBuildScreen;
 import com.ultimateautobuilder.client.image.ImageFiles;
 import com.ultimateautobuilder.client.visual.VisualStudioScreen;
@@ -50,7 +51,7 @@ public final class CaptureRunner {
             UltimateAutoBuilderMod.LOGGER.info("Capture : tick {}, écran {}, monde {}, étape {}", totalTicks,
                     mc.screen == null ? "aucun" : mc.screen.getClass().getSimpleName(), mc.level != null, step);
         }
-        if (totalTicks > 20 * 60 * 12) {
+        if (totalTicks > 20 * 60 * 16) {
             UltimateAutoBuilderMod.LOGGER.error("Capture : délai dépassé, fermeture du jeu");
             mc.stop();
             return;
@@ -221,13 +222,88 @@ public final class CaptureRunner {
             }
             case 15 -> {
                 shot(mc, "09_studio");
+                mc.setScreen(HubScreen.openedFromCrystal());
+                wait = 150;
+            }
+            case 16 -> {
+                shot(mc, "10_hub_accueil");
+                hub(mc, 4);
+            }
+            case 17 -> {
+                shot(mc, "11_hub_quetes");
+                hub(mc, 5);
+            }
+            case 18 -> {
+                shot(mc, "12_hub_materiaux");
+                hub(mc, 2);
+            }
+            case 19 -> {
+                shot(mc, "13_hub_shaders");
+                hub(mc, 1);
+                wait = 150;
+            }
+            case 20 -> {
+                shot(mc, "14_hub_maisons");
+                mc.setScreen(new BuilderScreen(null, "sakura"));
                 wait = 60;
+            }
+            case 21, 23, 25, 27 -> {
+                String id = SAKURA_SHOTS[(step - 22) / 2];
+                if (mc.screen instanceof BuilderScreen s) {
+                    s.captureSelect(id);
+                }
+                wait = 300;
+            }
+            case 22, 24, 26, 28 -> {
+                shot(mc, String.format("%02d_sakura_%s", 15 + (step - 23) / 2, SAKURA_SHOTS[(step - 23) / 2].substring(7)));
+                wait = 10;
+            }
+            case 29 -> {
+                // Maison Sakura de départ construite dans le monde, cristal en main.
+                mc.setScreen(null);
+                selectCrystal(mc);
+                mc.player.setYRot(mc.player.getYRot() + 90f);
+                PlacementController.SETTINGS.entry = DefaultCatalog.shared().get("sakura_petite_maison");
+                PlacementController.start();
+                mc.player.setXRot(15f);
+                wait = 300;
+            }
+            case 30 -> {
+                PlacementController.requestBuild(mc, null);
+                wait = 500;
+            }
+            case 31 -> {
+                PlacementController.stop();
+                shot(mc, "19_sakura_construite");
+                wait = 10;
             }
             default -> {
                 UltimateAutoBuilderMod.LOGGER.info("Capture terminée, fermeture du jeu");
                 mc.stop();
             }
         }
+    }
+
+    private static final String[] SAKURA_SHOTS = {"sakura_petite_maison", "sakura_minka_tradition", "sakura_villa_moderne", "sakura_ryokan"};
+
+    private static void hub(Minecraft mc, int section) {
+        if (mc.screen instanceof HubScreen h) {
+            h.captureSection(section);
+        }
+        wait = 60;
+    }
+
+    /** Met l'Ultimate Crystal (donné à la première connexion) dans la main du joueur. */
+    private static void selectCrystal(Minecraft mc) {
+        var inv = mc.player.getInventory();
+        for (int i = 0; i < 9; i++) {
+            if (inv.getItem(i).is(com.ultimateautobuilder.registry.ModItems.ULTIMATE_CRYSTAL.get())) {
+                inv.selected = i;
+                UltimateAutoBuilderMod.LOGGER.info("Capture : Ultimate Crystal en main (emplacement {})", i);
+                return;
+            }
+        }
+        UltimateAutoBuilderMod.LOGGER.warn("Capture : Ultimate Crystal absent de la barre d'action");
     }
 
     /** Image de test : maison (murs, toit, fenêtres, porte) sur fond de ciel, avec dégradés. */

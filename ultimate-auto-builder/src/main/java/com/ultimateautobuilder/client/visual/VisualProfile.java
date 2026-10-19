@@ -18,7 +18,7 @@ public final class VisualProfile {
         /** Étalonnage + vignette + netteté (une passe, plus de calculs). */
         BALANCED("Équilibré"),
         /** + halo lumineux (bloom) : extraction, flou horizontal et vertical. */
-        HIGH("Élevé"),
+        HIGH("Qualité"),
         /** Bloom à grand rayon en deux itérations. */
         ULTRA("Ultra");
 

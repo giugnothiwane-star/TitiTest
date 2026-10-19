@@ -27,7 +27,7 @@ public final class PlayerJoinHandler {
         }
         data.putBoolean(TAG, true);
         root.put("PlayerPersisted", data);
-        ItemStack stack = new ItemStack(ModItems.ICE_CRYSTAL.get());
+        ItemStack stack = new ItemStack(ModItems.ULTIMATE_CRYSTAL.get());
         if (!player.getInventory().add(stack)) {
             player.drop(stack, false);
         }

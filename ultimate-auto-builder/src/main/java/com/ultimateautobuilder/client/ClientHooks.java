@@ -47,11 +47,20 @@ public final class ClientHooks {
         if (player == null) {
             return false;
         }
-        if (player.getMainHandItem().is(ModItems.VISUAL_CRYSTAL.get())) {
+        if (isVisualCrystal(player.getMainHandItem())) {
             return true;
         }
         boolean offhandAllowed = ClientConfig.loaded() && ClientConfig.CRYSTAL_HAND.get() == ClientConfig.CrystalHand.ANY_HAND;
-        return offhandAllowed && player.getOffhandItem().is(ModItems.VISUAL_CRYSTAL.get());
+        return offhandAllowed && isVisualCrystal(player.getOffhandItem());
+    }
+
+    /** L'Ultimate Crystal donne aussi accès au studio (touche V). */
+    private static boolean isVisualCrystal(net.minecraft.world.item.ItemStack s) {
+        return s.is(ModItems.VISUAL_CRYSTAL.get()) || s.is(ModItems.ULTIMATE_CRYSTAL.get());
+    }
+
+    private static boolean isMenuCrystal(net.minecraft.world.item.ItemStack s) {
+        return s.is(ModItems.ICE_CRYSTAL.get()) || s.is(ModItems.ULTIMATE_CRYSTAL.get());
     }
 
     public static void openStudio() {
@@ -72,11 +81,11 @@ public final class ClientHooks {
         if (player == null) {
             return false;
         }
-        if (player.getMainHandItem().is(ModItems.ICE_CRYSTAL.get())) {
+        if (isMenuCrystal(player.getMainHandItem())) {
             return true;
         }
         boolean offhandAllowed = ClientConfig.loaded() && ClientConfig.CRYSTAL_HAND.get() == ClientConfig.CrystalHand.ANY_HAND;
-        return offhandAllowed && player.getOffhandItem().is(ModItems.ICE_CRYSTAL.get());
+        return offhandAllowed && isMenuCrystal(player.getOffhandItem());
     }
 
     public static void openMenu() {
@@ -85,8 +94,7 @@ public final class ClientHooks {
             return;
         }
         PlacementController.stop();
-        PacketDistributor.sendToServer(new ActionPayload(ActionPayload.REQUEST_STATE, 0, ""));
-        mc.setScreen(new BuilderScreen());
+        mc.setScreen(com.ultimateautobuilder.client.gui.HubScreen.openedFromCrystal());
     }
 
     public static void openMenuFromServer() {

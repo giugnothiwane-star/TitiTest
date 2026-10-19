@@ -13,8 +13,23 @@ import com.ultimateautobuilder.core.catalog.SizePreset;
 import com.ultimateautobuilder.core.catalog.models.DefaultCatalog;
 import com.ultimateautobuilder.core.model.B;
 import com.ultimateautobuilder.core.model.VoxelModel;
+import com.ultimateautobuilder.config.ServerConfig;
+import com.ultimateautobuilder.core.progression.ItemCost;
+import com.ultimateautobuilder.core.progression.PlayerProgress;
+import com.ultimateautobuilder.core.progression.ProgressionRules;
+import com.ultimateautobuilder.core.progression.Tier;
+import com.ultimateautobuilder.core.progression.UnlockRule;
+import com.ultimateautobuilder.progression.ProgressManager;
+import com.ultimateautobuilder.registry.ModCreativeTabs;
 import com.ultimateautobuilder.registry.ModItems;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.stats.Stats;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -317,13 +332,125 @@ public final class UabGameTests {
         });
     }
 
-    /** L'objet Cristal de Glace est enregistré sous un identifiant stable. */
+    /**
+     * Cristal unique : l'Ultimate Crystal est enregistré, fabricable, seul objet de l'onglet créatif ;
+     * les anciens cristaux restent enregistrés (mondes existants) et convertibles.
+     */
     @GameTest(template = TEMPLATE, timeoutTicks = 20, batch = "uab_item")
     public static void crystalRegistered(GameTestHelper h) {
-        h.assertTrue(ModItems.ICE_CRYSTAL.getId().toString().equals("ultimateautobuilder:ice_crystal"), "Identifiant inattendu");
-        h.assertTrue(ModItems.ICE_CRYSTAL.get().getDefaultInstance().getMaxStackSize() == 1, "Le cristal doit être non empilable");
-        h.assertTrue(ModItems.VISUAL_CRYSTAL.getId().toString().equals("ultimateautobuilder:visual_crystal"), "Identifiant du cristal visuel inattendu");
-        h.assertTrue(ModItems.VISUAL_CRYSTAL.get().getDefaultInstance().getMaxStackSize() == 1, "Le cristal visuel doit être non empilable");
+        h.assertTrue(ModItems.ULTIMATE_CRYSTAL.getId().toString().equals("ultimateautobuilder:ultimate_crystal"), "Identifiant inattendu");
+        h.assertTrue(ModItems.ULTIMATE_CRYSTAL.get().getDefaultInstance().getMaxStackSize() == 1, "Le cristal doit être non empilable");
+        h.assertTrue(ModItems.ICE_CRYSTAL.getId().toString().equals("ultimateautobuilder:ice_crystal"), "Ancien cristal absent du registre");
+        h.assertTrue(ModItems.VISUAL_CRYSTAL.getId().toString().equals("ultimateautobuilder:visual_crystal"), "Ancien cristal visuel absent du registre");
+        var recipes = h.getLevel().getServer().getRecipeManager();
+        for (String r : new String[]{"ultimate_crystal", "ultimate_crystal_from_ice_crystal", "ultimate_crystal_from_visual_crystal"}) {
+            h.assertTrue(recipes.byKey(UltimateAutoBuilderMod.id(r)).isPresent(), "Recette absente : " + r);
+        }
+        CreativeModeTab tab = ModCreativeTabs.MAIN.get();
+        tab.buildContents(new CreativeModeTab.ItemDisplayParameters(h.getLevel().enabledFeatures(), false, h.getLevel().registryAccess()));
+        List<String> items = tab.getDisplayItems().stream().map(s -> BuiltInRegistries.ITEM.getKey(s.getItem()).toString()).toList();
+        h.assertTrue(items.equals(List.of("ultimateautobuilder:ultimate_crystal")), "Onglet créatif inattendu : " + items);
         h.succeed();
+    }
+
+    /** Une maison de la collection Sakura se construit entièrement dans un vrai monde. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 2400, batch = "uab_sakura")
+    public static void buildSakuraHouse(GameTestHelper h) {
+        ModelEntry e = DefaultCatalog.shared().get("sakura_petite_maison");
+        h.assertTrue(e != null, "Maison Sakura absente du catalogue");
+        PlaceJob job = submit(h, request(h, "sakura_petite_maison", SizePreset.SMALL, 0, 0, BuildMode.NORMAL));
+        h.succeedWhen(() -> {
+            h.assertTrue(job.state() != Job.State.FAILED, "Échec : " + job.message());
+            h.assertTrue(job.state() == Job.State.DONE, "Construction en cours : " + job.state());
+            int placed = countNonAir(h.getLevel(), job.bounds());
+            h.assertTrue(placed >= job.total() * 9 / 10, "Blocs posés : " + placed + " / " + job.total());
+        });
+    }
+
+    /**
+     * Progression avec un vrai joueur serveur : construction verrouillée refusée, quêtes validées
+     * sur les statistiques réelles, matériaux retirés une seule fois, état relu depuis le disque.
+     */
+    @GameTest(template = TEMPLATE, timeoutTicks = 40, batch = "uab_progress")
+    public static void progressionUnlocksWithRealInventory(GameTestHelper h) {
+        ServerPlayer player = h.makeMockServerPlayerInLevel();
+        ServerConfig.ProgressionMode before = ServerConfig.PROGRESSION_MODE.get();
+        // Le joueur factice est en créatif : la progression est forcée pour ce test.
+        ServerConfig.PROGRESSION_MODE.set(ServerConfig.ProgressionMode.ALWAYS);
+        try {
+            ProgressManager.forget(player.getUUID());
+            ModelEntry locked = null;
+            for (ModelEntry e : DefaultCatalog.shared().all()) {
+                if (ProgressionRules.rule(e).tier() == Tier.PIERRE && !ProgressionRules.rule(e).cost().isEmpty()) {
+                    locked = e;
+                    break;
+                }
+            }
+            h.assertTrue(locked != null, "Aucune construction de niveau pierre");
+            UnlockRule rule = ProgressionRules.rule(locked);
+            h.assertFalse(ProgressManager.canBuild(player, locked), "Construction verrouillée acceptée");
+            String refused = null;
+            try {
+                BuildManager.get().submit(player, h.getLevel(), request(h, locked.id(), SizePreset.SMALL, 0, 0, BuildMode.NORMAL));
+            } catch (IllegalStateException ex) {
+                refused = ex.getMessage();
+            }
+            h.assertTrue(refused != null && refused.contains("verrouillée"), "Le serveur doit refuser une construction verrouillée : " + refused);
+            h.assertTrue(ProgressManager.unlock(player, locked.id()).status() == PlayerProgress.UnlockStatus.TIER_TOO_LOW, "Niveau non vérifié");
+
+            // Chaîne de quêtes jusqu'au niveau pierre, sur des faits réels.
+            h.assertTrue(ProgressManager.claim(player, "decouverte").status() == PlayerProgress.ClaimStatus.NOT_READY, "Quête validée sans action");
+            ProgressManager.markOpened(player, false);
+            h.assertTrue(ProgressManager.claim(player, "decouverte").status() == PlayerProgress.ClaimStatus.OK, "Ouverture du cristal non comptée");
+            h.assertTrue(ProgressManager.claim(player, "decouverte").status() == PlayerProgress.ClaimStatus.ALREADY, "Récompense donnée deux fois");
+            ProgressManager.markOpened(player, true);
+            h.assertTrue(ProgressManager.claim(player, "catalogue").status() == PlayerProgress.ClaimStatus.OK, "Quête catalogue");
+            ProgressManager.onBuildCompleted(player.getUUID(), DefaultCatalog.shared().get("maison_bois"), null);
+            h.assertTrue(ProgressManager.claim(player, "premiere_maison").status() == PlayerProgress.ClaimStatus.OK, "Quête première maison");
+            h.assertTrue(ProgressManager.claim(player, "pierre").status() == PlayerProgress.ClaimStatus.NOT_READY, "Minage non vérifié");
+            player.awardStat(Stats.BLOCK_MINED.get(Blocks.STONE), 64);
+            h.assertTrue(ProgressManager.claim(player, "pierre").status() == PlayerProgress.ClaimStatus.OK, "Statistique de minage ignorée");
+            h.assertTrue(ProgressManager.get(player).tier() == Tier.PIERRE, "Niveau pierre non atteint");
+
+            // Matériaux insuffisants : rien n'est retiré.
+            player.getInventory().clearContent();
+            ItemCost first = rule.cost().get(0);
+            Item firstItem = BuiltInRegistries.ITEM.get(ResourceLocation.parse(first.item()));
+            give(player, firstItem, 1);
+            h.assertTrue(ProgressManager.unlock(player, locked.id()).status() == PlayerProgress.UnlockStatus.MISSING_MATERIALS, "Matériaux non vérifiés");
+            h.assertTrue(player.getInventory().countItem(firstItem) == 1, "Objets retirés malgré un refus");
+
+            // Coût exact + 10 : seul le coût est retiré, une seule fois.
+            player.getInventory().clearContent();
+            for (ItemCost c : rule.cost()) {
+                give(player, BuiltInRegistries.ITEM.get(ResourceLocation.parse(c.item())), c.count() + 10);
+            }
+            var ok = ProgressManager.unlock(player, locked.id());
+            h.assertTrue(ok.status() == PlayerProgress.UnlockStatus.OK, "Déblocage refusé : " + ok.message());
+            h.assertTrue(ProgressManager.unlock(player, locked.id()).status() == PlayerProgress.UnlockStatus.ALREADY, "Double déblocage");
+            for (ItemCost c : rule.cost()) {
+                int left = player.getInventory().countItem(BuiltInRegistries.ITEM.get(ResourceLocation.parse(c.item())));
+                h.assertTrue(left == 10, c.item() + " : il reste " + left + " au lieu de 10");
+            }
+            h.assertTrue(ProgressManager.canBuild(player, locked), "Construction toujours verrouillée après déblocage");
+
+            // Relecture depuis le fichier du monde.
+            ProgressManager.forget(player.getUUID());
+            PlayerProgress reloaded = ProgressManager.get(player);
+            h.assertTrue(reloaded.tier() == Tier.PIERRE, "Niveau perdu à la relecture");
+            h.assertTrue(reloaded.unlocked().contains(locked.id()), "Déblocage perdu à la relecture");
+            h.assertTrue(reloaded.claimed().contains("pierre"), "Quête perdue à la relecture");
+        } finally {
+            ServerConfig.PROGRESSION_MODE.set(before);
+        }
+        h.succeed();
+    }
+
+    private static void give(ServerPlayer player, Item item, int count) {
+        for (int left = count; left > 0; ) {
+            int n = Math.min(left, item.getDefaultMaxStackSize());
+            player.getInventory().add(new ItemStack(item, n));
+            left -= n;
+        }
     }
 }

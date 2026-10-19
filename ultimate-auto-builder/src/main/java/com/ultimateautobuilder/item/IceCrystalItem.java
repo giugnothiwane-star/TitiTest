@@ -72,6 +72,9 @@ public class IceCrystalItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        if (getClass() != UltimateCrystalItem.class) {
+            tooltip.add(Component.translatable("item.ultimateautobuilder.legacy_crystal.tooltip").withStyle(ChatFormatting.GOLD));
+        }
         tooltip.add(Component.translatable("item.ultimateautobuilder.ice_crystal.tooltip1").withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable("item.ultimateautobuilder.ice_crystal.tooltip2").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("item.ultimateautobuilder.ice_crystal.tooltip3").withStyle(ChatFormatting.GRAY));
