@@ -18,6 +18,7 @@ public enum Category {
     PIXELART("pixelart", "Pixel art et sculptures", 15),
     HUMOR("humor", "Structures humoristiques", 10),
     MISC("misc", "Structures diverses", 15),
+    MOBS("mobs", "Mobs Minecraft", 88),
     CUSTOM("custom", "Structures personnalisées", 0);
 
     private final String key;

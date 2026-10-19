@@ -28,6 +28,7 @@ public final class DefaultCatalog {
         PixelArtModels.register(c);
         HumorModels.register(c);
         MiscModels.register(c);
+        MobModels.register(c);
         return c;
     }
 

@@ -1,61 +1,56 @@
 #!/usr/bin/env python3
-"""Sonde d'API : affiche des extraits des sources Minecraft/NeoForge décompilées (jar de sources
-produit par ModDevGradle) pour vérifier les signatures réellement disponibles. Usage CI uniquement."""
-import glob, re, sys, zipfile
+"""Sonde d'API (CI uniquement) : affiche les signatures publiques des classes Minecraft utiles,
+extraites par javap du jar compilé produit par ModDevGradle, et les chaînes constantes qui
+indiquent un comportement (chemins de ressources, espaces de noms)."""
+import glob, re, subprocess
 
-PROBES = [
-    # (classe, motifs regex recherchés, lignes de contexte)
-    ("net/minecraft/client/renderer/PostChain.java", [r"public .*\(", r"class PostChain"], 0),
-    ("net/minecraft/client/renderer/PostPass.java", [r"public .*\("], 0),
-    ("net/minecraft/client/renderer/EffectInstance.java", [r"public EffectInstance\(", r"shaders/program", r"ResourceLocation\.(parse|tryParse|withDefault)"], 2),
-    ("com/mojang/blaze3d/shaders/Program.java", [r"shaders/program", r"getOrCreate", r"ResourceLocation"], 2),
-    ("net/minecraft/client/renderer/GameRenderer.java", [r"postEffect", r"void loadEffect", r"checkEntityPostEffect", r"blurEffect"], 1),
-    ("net/minecraft/server/packs/repository/Pack.java", [r"public static .*readMetaAndCreate", r"public .*\("], 0),
-    ("net/minecraft/server/packs/PackLocationInfo.java", [r"record PackLocationInfo"], 0),
-    ("net/minecraft/server/packs/repository/PackSelectionConfig.java", [r"record"], 0),
-    ("net/minecraft/server/packs/PathPackResources.java", [r"class PathResourcesSupplier", r"public PathResourcesSupplier"], 1),
-    ("net/neoforged/neoforge/event/AddPackFindersEvent.java", [r"public .*\("], 0),
-    ("net/neoforged/neoforge/client/event/RegisterColorHandlersEvent.java", [r"public .*\(", r"class "], 0),
-    ("net/neoforged/neoforge/client/event/ViewportEvent.java", [r"public .*\(", r"class "], 0),
-    ("net/neoforged/neoforge/client/event/RenderLevelStageEvent.java", [r"Stage AFTER_", r"public .*get"], 0),
-    ("com/mojang/blaze3d/platform/NativeImage.java", [r"public static NativeImage read\(", r"public void writeToFile", r"public int getPixelRGBA", r"public void setPixelRGBA", r"public byte\[\] asByteArray"], 0),
-    ("net/minecraft/client/Minecraft.java", [r"public CompletableFuture<Void> reloadResourcePacks", r"public BlockColors getBlockColors", r"public LevelRenderer levelRenderer"], 0),
-    ("net/minecraft/client/renderer/LevelRenderer.java", [r"public void allChanged"], 0),
-    ("net/minecraft/client/gui/GuiGraphics.java", [r"public void blit\(ResourceLocation"], 0),
-    ("net/minecraft/client/renderer/FogRenderer.java", [r"public static void setupFog", r"public static void setupColor"], 0),
-    ("net/minecraft/client/OptionInstance.java", [r"UnitDouble", r"public void set\("], 0),
-    ("net/minecraft/client/Options.java", [r"gamma"], 0),
-    ("net/minecraft/client/color/block/BlockColors.java", [r"public void register", r"public int getColor"], 0),
-    ("net/minecraft/client/renderer/BiomeColors.java", [r"public static int"], 0),
-    ("net/minecraft/client/renderer/texture/DynamicTexture.java", [r"public .*\("], 0),
+CLASSES = [
+    ("net.minecraft.client.renderer.PostChain", None),
+    ("net.minecraft.client.renderer.PostPass", None),
+    ("net.minecraft.client.renderer.EffectInstance", r"shaders|ResourceLocation"),
+    ("com.mojang.blaze3d.shaders.Program", r"shaders|ResourceLocation|program"),
+    ("net.minecraft.client.renderer.GameRenderer", r"post/|PostChain|loadEffect|blurEffect"),
+    ("net.minecraft.server.packs.repository.Pack", None),
+    ("net.minecraft.server.packs.PackLocationInfo", None),
+    ("net.minecraft.server.packs.repository.PackSelectionConfig", None),
+    ("net.minecraft.server.packs.PathPackResources$PathResourcesSupplier", None),
+    ("net.minecraft.server.packs.repository.PackSource", None),
+    ("com.mojang.blaze3d.platform.NativeImage", None),
+    ("net.minecraft.client.renderer.texture.DynamicTexture", None),
+    ("net.minecraft.client.color.block.BlockColors", None),
+    ("net.minecraft.client.renderer.BiomeColors", None),
+    ("net.minecraft.client.OptionInstance", None),
+    ("net.minecraft.client.gui.components.AbstractSliderButton", None),
+    ("net.minecraft.client.renderer.LevelRenderer", r"allChanged"),
+    ("net.minecraft.client.Minecraft", r"reloadResourcePacks|getMainRenderTarget|getFps|fpsString"),
+    ("com.mojang.blaze3d.pipeline.RenderTarget", None),
+    ("net.minecraft.client.renderer.texture.TextureManager", None),
+    ("org.lwjgl.util.tinyfd.TinyFileDialogs", r"tinyfd_openFileDialog|tinyfd_messageBox"),
 ]
 
+
+def jars():
+    out = [j for j in glob.glob("build/moddev/artifacts/*.jar") if "sources" not in j and "extra" not in j]
+    out += glob.glob("/home/runner/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-tinyfd/*/*/lwjgl-tinyfd-3.3.3.jar")
+    return out
+
+
 def main():
-    jars = [j for j in glob.glob("build/**/*.jar", recursive=True) + glob.glob("/home/runner/.gradle/**/*sources*.jar", recursive=True)
-            if "sources" in j and ("neoforge" in j or "minecraft" in j)]
-    print("Jars de sources :", jars[:10])
-    if not jars:
-        return
-    zips = [zipfile.ZipFile(j) for j in jars]
-    for path, pats, ctx in PROBES:
-        src = None
-        for z in zips:
-            if path in z.namelist():
-                src = z.read(path).decode("utf-8", "replace")
-                break
-        print("\n===== " + path + (" (ABSENT)" if src is None else ""))
-        if src is None:
+    cp = ":".join(jars())
+    print("Classpath sonde :", cp)
+    for cls, pattern in CLASSES:
+        print("\n===== " + cls)
+        r = subprocess.run(["javap", "-cp", cp, "-p", "-c" if pattern else "-public", cls], capture_output=True, text=True)
+        if r.returncode != 0:
+            print("  (introuvable) " + r.stderr.strip()[:200])
             continue
-        lines = src.split("\n")
-        shown = set()
-        for i, l in enumerate(lines):
-            if any(re.search(p, l) for p in pats):
-                for k in range(max(0, i - ctx), min(len(lines), i + ctx + 1)):
-                    if k not in shown:
-                        shown.add(k)
-                        print("%5d %s" % (k + 1, lines[k].rstrip()[:220]))
-    # Bibliothèques du jeu utiles (sélecteur de fichiers natif).
-    print("\n===== Jars lwjgl tinyfd :", glob.glob("/home/runner/.gradle/**/lwjgl-tinyfd*.jar", recursive=True)[:4])
+        for line in r.stdout.split("\n"):
+            t = line.strip()
+            is_sig = line.startswith("  ") and not line.startswith("    ") and "(" in t and t.endswith(";")
+            is_hit = pattern and re.search(pattern, t) and ("ldc" in t or "invoke" in t or "String" in t)
+            if (is_sig and (pattern is None or not t.startswith("private"))) or is_hit or t.startswith("public class") or t.startswith("public final"):
+                print("  " + t[:230])
+
 
 if __name__ == "__main__":
     main()
