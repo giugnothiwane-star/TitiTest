@@ -356,7 +356,7 @@ public final class BlockMesh implements AutoCloseable {
         m.rotateY((float) Math.toRadians(yaw));
         m.translate(-cx, -cy, -cz);
         Matrix4f mv = new Matrix4f(RenderSystem.getModelViewMatrix()).mul(m);
-        g.enableScissor(x, y, x + w, y + h);
+        com.ultimateautobuilder.client.gui.ScaledScreen.enableScissor(g, x, y, x + w, y + h);
         Lighting.setupFor3DItems();
         draw(mv, RenderSystem.getProjectionMatrix());
         g.disableScissor();

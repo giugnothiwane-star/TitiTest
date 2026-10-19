@@ -47,7 +47,7 @@ import java.util.function.Predicate;
  * de détail (taille, rotation, miroir, mode, position), historique et modèles personnalisés.
  * Utilisable à la souris, au clavier et à la manette. Le serveur revalide chaque demande.
  */
-public final class BuilderScreen extends Screen {
+public final class BuilderScreen extends ScaledScreen {
     private enum Page { CATALOG, HISTORY, CUSTOM }
 
     /** Zone ayant le focus manette : grille de cartes ou commandes (détail / listes). */
@@ -87,6 +87,8 @@ public final class BuilderScreen extends Screen {
     private int thumbView;
     // Aperçu 3D : orientation et zoom manipulés à la souris.
     private float previewYaw, previewPitch = ModelPreviews.BASE_PITCH, previewZoom = 1f;
+    // Défilement des réglages du panneau de détail.
+    private int detailScroll, maxDetailScroll, controlsTop;
     private boolean previewTouched, previewDragging, previewDragged;
     private boolean lastCanBuild;
 
@@ -234,6 +236,7 @@ public final class BuilderScreen extends Screen {
         previewPitch = ModelPreviews.BASE_PITCH;
         previewZoom = 1f;
         previewTouched = false;
+        detailScroll = 0;
         if (e != null) {
             ClientModels.request(e, PlacementController.SETTINGS.size(), PlacementController.SETTINGS.hollow);
         }
@@ -242,7 +245,7 @@ public final class BuilderScreen extends Screen {
     // ------------------------------------------------------------------ mise en page
 
     @Override
-    protected void init() {
+    protected void initScaled() {
         refreshView();
         compact = width < 560;
         int margin = 8;
@@ -374,8 +377,10 @@ public final class BuilderScreen extends Screen {
         int w = panelW - 8;
         int half = (w - 4) / 2;
         int textH = 34;
-        thumbSize = Math.max(32, Math.min(compact ? 96 : 150, panelH - detailRows() * ROW_H - textH - 8));
-        int y = panelY + thumbSize + textH + 4;
+        // Aperçu de taille confortable ; les réglages défilent dessous (molette) s'ils ne tiennent pas.
+        thumbSize = Math.max(64, Math.min(compact ? 120 : 170, (int) (panelH * 0.45)));
+        controlsTop = panelY + thumbSize + textH + 4;
+        int y = controlsTop - detailScroll;
 
         controls.add(addRenderableWidget(Button.builder(Component.literal(sizeLabel(e)), b -> {
             cycleSize(1);
@@ -496,6 +501,31 @@ public final class BuilderScreen extends Screen {
                 zone = Zone.GRID;
                 rebuildWidgets();
             }).bounds(x, y, w, 20).build()));
+            y += ROW_H;
+        }
+        layoutControls(y + detailScroll - controlsTop);
+    }
+
+    /** Masque les réglages hors du panneau et garde visible celui qui a le focus (manette, clavier). */
+    private void layoutControls(int contentH) {
+        int bottom = panelY + panelH;
+        int viewH = Math.max(1, bottom - controlsTop);
+        maxDetailScroll = Math.max(0, contentH - viewH);
+        int clamped = Math.max(0, Math.min(detailScroll, maxDetailScroll));
+        int shift = detailScroll - clamped;
+        if (zone == Zone.CONTROLS && controlFocus >= 0 && controlFocus < controls.size()) {
+            AbstractWidget f = controls.get(controlFocus);
+            int fy = f.getY() + shift;
+            if (fy < controlsTop) {
+                shift += controlsTop - fy;
+            } else if (fy + f.getHeight() > bottom) {
+                shift -= fy + f.getHeight() - bottom;
+            }
+        }
+        detailScroll = Math.max(0, Math.min(maxDetailScroll, detailScroll - shift));
+        for (AbstractWidget w : controls) {
+            w.setY(w.getY() + shift);
+            w.visible = w.getY() >= controlsTop && w.getY() + w.getHeight() <= bottom;
         }
     }
 
@@ -938,8 +968,8 @@ public final class BuilderScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (super.mouseClicked(mx, my, button)) {
+    protected boolean mouseClickedScaled(double mx, double my, int button) {
+        if (super.mouseClickedScaled(mx, my, button)) {
             return true;
         }
         if (button != 0) {
@@ -988,7 +1018,7 @@ public final class BuilderScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+    protected boolean mouseDraggedScaled(double mx, double my, int button, double dx, double dy) {
         if (previewDragging && button == 0) {
             previewDragged = true;
             if (!previewTouched) {
@@ -1000,11 +1030,11 @@ public final class BuilderScreen extends Screen {
             previewPitch = Math.max(-89f, Math.min(89f, previewPitch + (float) dy * 1.2f));
             return true;
         }
-        return super.mouseDragged(mx, my, button, dx, dy);
+        return super.mouseDraggedScaled(mx, my, button, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int button) {
+    protected boolean mouseReleasedScaled(double mx, double my, int button) {
         if (previewDragging && button == 0) {
             previewDragging = false;
             if (!previewDragged && overPreview(mx, my)) {
@@ -1012,16 +1042,22 @@ public final class BuilderScreen extends Screen {
             }
             return true;
         }
-        return super.mouseReleased(mx, my, button);
+        return super.mouseReleasedScaled(mx, my, button);
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
-        if (super.mouseScrolled(mx, my, sx, sy)) {
+    protected boolean mouseScrolledScaled(double mx, double my, double sx, double sy) {
+        if (super.mouseScrolledScaled(mx, my, sx, sy)) {
             return true;
         }
         if (my >= tabsY && my < tabsY + 14) {
             tabScroll = Math.max(0, Math.min(tabs.size() - 1, tabScroll - (int) Math.signum(sy)));
+            return true;
+        }
+        if (page == Page.CATALOG && selected() != null && (!compact || detailOpen) && mx >= panelX && mx < panelX + panelW
+                && my >= controlsTop && my < panelY + panelH && maxDetailScroll > 0 && sy != 0) {
+            detailScroll = Math.max(0, Math.min(maxDetailScroll, detailScroll - (int) Math.signum(sy) * ROW_H));
+            rebuildWidgets();
             return true;
         }
         if (overPreview(mx, my) && sy != 0) {
@@ -1222,6 +1258,14 @@ public final class BuilderScreen extends Screen {
             }
         }
         g.drawString(font, "§7glisser : tourner · molette : zoom", panelX + 6, panelY + thumbSize - 9, 0xFF8899AA, false);
+        if (maxDetailScroll > 0) {
+            // Barre de défilement des réglages.
+            int top = controlsTop, bottom = panelY + panelH, track = bottom - top;
+            int bar = Math.max(12, track * track / (track + maxDetailScroll));
+            int by = top + (track - bar) * detailScroll / maxDetailScroll;
+            g.fill(panelX + panelW - 3, top, panelX + panelW - 1, bottom, 0x40FFFFFF);
+            g.fill(panelX + panelW - 3, by, panelX + panelW - 1, by + bar, 0xC0A0D8FF);
+        }
         int y = panelY + thumbSize + 2;
         g.drawString(font, font.plainSubstrByWidth("§l" + e.name(), panelW - 8), panelX + 4, y, 0xFFFFFFFF);
         g.drawString(font, font.plainSubstrByWidth(e.category().displayName() + " · complexité " + e.complexity() + "/5", panelW - 8), panelX + 4, y + 11,

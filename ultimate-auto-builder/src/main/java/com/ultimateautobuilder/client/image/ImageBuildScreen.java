@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * plan de construction, projets, puis envoi au serveur qui l'ajoute aux modèles personnalisés.
  * Tous les calculs lourds s'exécutent sur un thread dédié : le jeu reste fluide pendant l'analyse.
  */
-public final class ImageBuildScreen extends Screen {
+public final class ImageBuildScreen extends com.ultimateautobuilder.client.gui.ScaledScreen {
     private enum Tab { IMPORT("Image"), ANALYSIS("Analyse"), OPTIONS("Options"), PREVIEW("Aperçu"), MATERIALS("Matériaux"), PLAN("Plan");
 
         final String label;
@@ -127,7 +127,7 @@ public final class ImageBuildScreen extends Screen {
     // ------------------------------------------------------------------ mise en page
 
     @Override
-    protected void init() {
+    protected void initScaled() {
         ImageFiles.ensureDirs();
         cx = 8;
         cy = 40;
@@ -777,7 +777,7 @@ public final class ImageBuildScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
         super.render(g, mx, my, pt);
-        g.drawString(font, "§b❄ §fImage → Construction §7— reconstruction locale (aucune IA en ligne, aucune donnée envoyée hors du jeu)", 8, 5,
+        g.drawString(font, "§b❄ §fImage → Construction §7— calcul local, rien n'est envoyé hors du jeu", 8, 5,
                 0xFFFFFFFF);
         String st = status + (ModelSender.busy() ? " §7(envoi " + ModelSender.progress() + ")" : "");
         g.drawString(font, font.plainSubstrByWidth(st, width - 110), 8, height - 18, 0xFFE0E0E0);
@@ -876,8 +876,13 @@ public final class ImageBuildScreen extends Screen {
         for (String wmsg : a.warnings()) {
             lines.add("§6⚠ " + wmsg);
         }
+        // Le texte s'arrête au-dessus du bouton « Étape suivante ».
+        int limit = cy + ch - 34;
         for (String l : lines) {
             for (var seq : font.split(Component.literal(l), half())) {
+                if (y > limit) {
+                    return;
+                }
                 g.drawString(font, seq, cx, y, 0xFFFFFFFF);
                 y += 10;
             }
@@ -979,7 +984,7 @@ public final class ImageBuildScreen extends Screen {
         }
         for (String l : lines) {
             for (var seq : font.split(Component.literal(l), iw)) {
-                if (y > cy + ch - 10) {
+                if (y > cy + ch - 12) {
                     return;
                 }
                 g.drawString(font, seq, ix, y, 0xFFFFFFFF);
@@ -1106,8 +1111,8 @@ public final class ImageBuildScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (super.mouseClicked(mx, my, button)) {
+    protected boolean mouseClickedScaled(double mx, double my, int button) {
+        if (super.mouseClickedScaled(mx, my, button)) {
             return true;
         }
         if (button == 0 && overPreview(mx, my) && S.preview < 4) {
@@ -1118,26 +1123,26 @@ public final class ImageBuildScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+    protected boolean mouseDraggedScaled(double mx, double my, int button, double dx, double dy) {
         if (previewDragging && button == 0) {
             previewYaw += (float) dx * 1.2f;
             previewPitch = Math.max(-89f, Math.min(89f, previewPitch + (float) dy * 1.2f));
             return true;
         }
-        return super.mouseDragged(mx, my, button, dx, dy);
+        return super.mouseDraggedScaled(mx, my, button, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int button) {
+    protected boolean mouseReleasedScaled(double mx, double my, int button) {
         if (previewDragging && button == 0) {
             previewDragging = false;
             return true;
         }
-        return super.mouseReleased(mx, my, button);
+        return super.mouseReleasedScaled(mx, my, button);
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+    protected boolean mouseScrolledScaled(double mx, double my, double sx, double sy) {
         if (overPreview(mx, my) && S.preview != 9 && sy != 0) {
             previewZoom = Math.max(0.4f, Math.min(4f, previewZoom * (sy > 0 ? 1.15f : 1 / 1.15f)));
             return true;
@@ -1156,7 +1161,7 @@ public final class ImageBuildScreen extends Screen {
             rebuildWidgets();
             return true;
         }
-        return super.mouseScrolled(mx, my, sx, sy);
+        return super.mouseScrolledScaled(mx, my, sx, sy);
     }
 
     @Override
