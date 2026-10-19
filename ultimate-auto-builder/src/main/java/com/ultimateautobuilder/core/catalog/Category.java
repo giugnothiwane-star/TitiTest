@@ -2,6 +2,7 @@ package com.ultimateautobuilder.core.catalog;
 
 /** Catégories du catalogue, avec l'objectif de répartition du cahier des charges. */
 public enum Category {
+    SAKURA("sakura", "Maisons Sakura et japonaises", 20),
     HOUSES("houses", "Maisons et villas", 45),
     CASTLES("castles", "Châteaux et médiéval", 30),
     CITIES("cities", "Villes et bâtiments urbains", 35),

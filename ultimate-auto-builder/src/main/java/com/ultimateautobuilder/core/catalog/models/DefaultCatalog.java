@@ -12,6 +12,7 @@ public final class DefaultCatalog {
     /** Nouveau catalogue indépendant (tests, outils). */
     public static Catalog create() {
         Catalog c = new Catalog();
+        SakuraModels.register(c);
         HouseModels.register(c);
         CastleModels.register(c);
         CityModels.register(c);

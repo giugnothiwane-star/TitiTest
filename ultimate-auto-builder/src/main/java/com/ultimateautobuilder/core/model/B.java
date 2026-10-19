@@ -12,6 +12,7 @@ public final class B {
     public static final String S = "south";
     public static final String E = "east";
     public static final String W = "west";
+    public static final String[] HORIZONTALS = {N, E, S, W};
 
     private B() {
     }
