@@ -34,7 +34,8 @@ import java.util.List;
 @GameTestHolder(UltimateAutoBuilderMod.MOD_ID)
 @PrefixGameTestTemplate(false)
 public final class UabGameTests {
-    private static final String TEMPLATE = "ultimateautobuilder:empty_48";
+    // NeoForge préfixe lui-même l'espace de noms du @GameTestHolder.
+    private static final String TEMPLATE = "empty_48";
     /** Point d'ancrage relatif au gabarit : centre, juste au-dessus du sol (y = 0). */
     private static final BlockPos CENTER = new BlockPos(24, 1, 24);
 
