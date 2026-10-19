@@ -13,6 +13,8 @@ on:
 
 permissions:
   contents: read
+  # Publication des captures d'écran dans une vérification « Captures en jeu » (annotations).
+  checks: write
 
 jobs:
   build:
@@ -80,6 +82,7 @@ jobs:
       # Vérification visuelle : vrai client Minecraft sous affichage virtuel (rendu logiciel Mesa).
       # Le mod parcourt ses écrans et enregistre des captures, imprimées ensuite dans le journal.
       - name: Captures d'écran en jeu (client réel, affichage virtuel)
+        if: github.event_name != 'pull_request'
         continue-on-error: true
         timeout-minutes: 25
         env:
@@ -90,7 +93,12 @@ jobs:
           echo "Monde de test : $LEVEL"
           mkdir -p run/saves && rm -rf run/saves/uab_capture run/screenshots
           if [ -n "$LEVEL" ]; then cp -r "$(dirname "$LEVEL")" run/saves/uab_capture; rm -f run/saves/uab_capture/session.lock; fi
-          timeout 1200 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runCaptureClient -Pneo_version=${{ steps.neo.outputs.version }} --console=plain || echo "Client terminé avec le code $?"
+          timeout 1080 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runCaptureClient -Pneo_version=${{ steps.neo.outputs.version }} --console=plain || echo "Client terminé avec le code $?"
           ls -la run/screenshots || true
-          grep -iE "capture|exception|error|OpenGL|GL version" run/logs/latest.log | tail -n 80 || true
-          java tools/CaptureB64.java run/screenshots 960
+          grep -E "Capture|Exception|ERROR|GL info|Backend" run/logs/latest.log | grep -viE "flite|narrator|OpenAL|SoundSystem" | cut -c1-300 | tail -n 80 || true
+          java tools/CaptureB64.java run/screenshots 960 "$RUNNER_TEMP/captures.json" "${{ github.sha }}"
+          if [ -f "$RUNNER_TEMP/captures.json" ]; then
+            curl -sS -o /dev/null -w "Vérification « Captures en jeu » : HTTP %{http_code}\n" -X POST \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/check-runs" --data-binary "@$RUNNER_TEMP/captures.json"
+          fi

@@ -35,13 +35,28 @@ public final class CaptureRunner {
         return ENABLED;
     }
 
+    private static int totalTicks, noWorldTicks, createTicks;
+    private static boolean worldRequested;
+
     /** Appelé à chaque tick client. */
     public static void tick() {
         if (!ENABLED) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
+        totalTicks++;
+        if (totalTicks % 200 == 0) {
+            UltimateAutoBuilderMod.LOGGER.info("Capture : tick {}, écran {}, monde {}, étape {}", totalTicks,
+                    mc.screen == null ? "aucun" : mc.screen.getClass().getSimpleName(), mc.level != null, step);
+        }
+        if (totalTicks > 20 * 60 * 12) {
+            UltimateAutoBuilderMod.LOGGER.error("Capture : délai dépassé, fermeture du jeu");
+            mc.stop();
+            return;
+        }
         if (mc.player == null || mc.level == null) {
+            noWorldTicks++;
+            ensureWorld(mc);
             return;
         }
         ticks++;
@@ -50,10 +65,43 @@ public final class CaptureRunner {
             return;
         }
         try {
+            UltimateAutoBuilderMod.LOGGER.info("Capture : étape {}", step);
             run(mc);
         } catch (RuntimeException e) {
             UltimateAutoBuilderMod.LOGGER.error("Capture : étape {} en échec", step, e);
             step++;
+        }
+    }
+
+    /**
+     * Sans monde ouvert (monde de test absent, accès rapide refusé) : ouverture de l'écran de
+     * création puis appui sur « Créer un nouveau monde » avec les réglages par défaut.
+     */
+    private static void ensureWorld(Minecraft mc) {
+        if (mc.screen instanceof net.minecraft.client.gui.screens.worldselection.CreateWorldScreen screen) {
+            if (++createTicks == 60) {
+                for (var child : screen.children()) {
+                    if (child instanceof net.minecraft.client.gui.components.Button b
+                            && b.getMessage().getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents t
+                            && t.getKey().equals("selectWorld.create")) {
+                        UltimateAutoBuilderMod.LOGGER.info("Capture : création d'un monde");
+                        b.onPress();
+                        return;
+                    }
+                }
+                UltimateAutoBuilderMod.LOGGER.warn("Capture : bouton de création introuvable");
+            }
+            return;
+        }
+        boolean idle = mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen
+                || mc.screen instanceof net.minecraft.client.gui.screens.DisconnectedScreen
+                || mc.screen instanceof net.minecraft.client.gui.screens.AlertScreen
+                || mc.screen instanceof net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
+        if (!worldRequested && idle && noWorldTicks > 300) {
+            worldRequested = true;
+            UltimateAutoBuilderMod.LOGGER.info("Capture : aucun monde ouvert ({}), ouverture de l'écran de création",
+                    mc.screen.getClass().getSimpleName());
+            net.minecraft.client.gui.screens.worldselection.CreateWorldScreen.openFresh(mc, mc.screen);
         }
     }
 
