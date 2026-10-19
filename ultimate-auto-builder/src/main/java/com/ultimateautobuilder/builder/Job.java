@@ -17,6 +17,13 @@ public abstract class Job {
     protected final String title;
     protected volatile State state = State.GENERATING;
     protected String message = "";
+    /** Annulation demandée par un joueur ou le serveur (traitée au prochain tick, même en pause). */
+    protected volatile boolean cancelRequested;
+    /** En pause : la tâche garde ses chunks et sa progression mais ne pose plus rien. */
+    protected volatile boolean paused;
+    protected String pauseReason = "";
+    /** Vrai une fois la mise en pause annoncée au joueur (évite de répéter le message). */
+    boolean pauseAnnounced;
     protected final long createdAt = System.currentTimeMillis();
 
     protected Job(int id, UUID owner, String ownerName, ResourceKey<Level> dimension, String title) {
@@ -53,6 +60,32 @@ public abstract class Job {
 
     public ResourceKey<Level> dimension() {
         return dimension;
+    }
+
+    public boolean paused() {
+        return paused && !finished();
+    }
+
+    public boolean cancelPending() {
+        return cancelRequested;
+    }
+
+    public String pauseReason() {
+        return pauseReason;
+    }
+
+    /** Met la tâche en pause (sans effet si elle est terminée). */
+    public void pause(String reason) {
+        if (!finished()) {
+            paused = true;
+            pauseReason = reason == null ? "" : reason;
+        }
+    }
+
+    public void resume() {
+        paused = false;
+        pauseReason = "";
+        pauseAnnounced = false;
     }
 
     public boolean finished() {

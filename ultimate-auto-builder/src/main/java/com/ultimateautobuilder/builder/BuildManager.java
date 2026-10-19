@@ -223,6 +223,24 @@ public final class BuildManager {
         return null;
     }
 
+    /** Met en pause (ou reprend) une tâche du joueur ; les administrateurs agissent sur toutes. */
+    public Job setPaused(ServerPlayer player, int jobId, boolean admin, boolean pause) {
+        for (int i = jobs.size() - 1; i >= 0; i--) {
+            Job j = jobs.get(i);
+            boolean mine = player == null || player.getUUID().equals(j.owner());
+            if ((jobId < 0 || j.id() == jobId) && (mine || admin) && !j.finished()) {
+                if (pause) {
+                    j.pause("demandée par " + (player == null ? "le serveur" : player.getGameProfile().getName()));
+                    j.pauseAnnounced = true;
+                } else {
+                    j.resume();
+                }
+                return j;
+            }
+        }
+        return null;
+    }
+
     /** Lance le retour arrière d'une construction terminée. */
     public RestoreJob undo(ServerPlayer player, ServerLevel fallbackLevel, int historyId, boolean admin) {
         HistoryEntry e = historyId < 0 ? history.lastUndoable(admin ? null : (player == null ? null : player.getUUID())) : history.get(historyId);
@@ -287,7 +305,12 @@ public final class BuildManager {
         long deadline = now + (long) (available * 1_000_000);
         int blockBudget = Math.max(16, (int) (ServerConfig.blocksPerTick() * throttle));
 
-        List<Job> active = new ArrayList<>(jobs);
+        List<Job> active = new ArrayList<>();
+        for (Job j : jobs) {
+            if (!j.paused() || j.cancelPending()) {
+                active.add(j);
+            }
+        }
         int share = Math.max(8, blockBudget / Math.max(1, active.size()));
         for (Job j : active) {
             ServerLevel level = server.getLevel(j.dimension());
@@ -349,8 +372,13 @@ public final class BuildManager {
         if (p == null) {
             return;
         }
-        PacketDistributor.sendToPlayer(p, new JobProgressPayload(j.id(), j.title(), j.progress(), j.total(), j.state().ordinal(),
-                finalMessage ? j.message() : ""));
+        String status = finalMessage ? j.message() : j.paused() ? "En pause : " + j.pauseReason() : "";
+        PacketDistributor.sendToPlayer(p, new JobProgressPayload(j.id(), j.title(), j.progress(), j.total(), j.state().ordinal(), status));
+        if (!finalMessage && j.paused() && !j.pauseAnnounced) {
+            j.pauseAnnounced = true;
+            p.sendSystemMessage(Component.literal("[Ultimate Auto Builder] " + j.title() + " en pause : " + j.pauseReason()
+                    + " — /uab resume " + j.id() + " ou bouton « Reprendre » de l'historique").withStyle(ChatFormatting.AQUA));
+        }
         if (finalMessage && !j.message().isEmpty()) {
             ChatFormatting color = j.state() == Job.State.DONE ? ChatFormatting.GREEN : j.state() == Job.State.CANCELLED
                     ? ChatFormatting.YELLOW : ChatFormatting.RED;

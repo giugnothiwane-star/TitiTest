@@ -71,6 +71,58 @@ public final class UabGameTests {
         return n;
     }
 
+    /** Mode couche par couche : la tâche se met en pause, puis se termine après des reprises successives. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 2400, batch = "uab_steps")
+    public static void stepModePausesAndResumes(GameTestHelper h) {
+        BuildRequest req = new BuildRequest("maison_bois", SizePreset.CUSTOM, 9, 0, false, h.absolutePos(CENTER),
+                h.getLevel().dimension().location(), BuildMode.NORMAL, true, true, BuildRequest.STEP_LAYER, false, false);
+        PlaceJob job = submit(h, req);
+        int[] pauses = new int[1];
+        h.onEachTick(() -> {
+            if (job.paused()) {
+                pauses[0]++;
+                h.assertTrue(job.progress() < job.total(), "Pause alors que tout est posé");
+                job.resume();
+            }
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(job.state() != Job.State.FAILED, "Échec : " + job.message());
+            h.assertTrue(job.state() == Job.State.DONE, "Construction en cours : " + job.state());
+            h.assertTrue(pauses[0] >= 3, "Trop peu de pauses en mode couche par couche : " + pauses[0]);
+        });
+    }
+
+    /** Option « zone vide uniquement » : un obstacle dans l'emprise fait échouer la demande sans rien poser. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_empty")
+    public static void emptyOnlyRefusesObstacles(GameTestHelper h) {
+        h.setBlock(new BlockPos(CENTER.getX(), 3, CENTER.getZ()), Blocks.SPONGE);
+        BuildRequest req = new BuildRequest("maison_bois", SizePreset.CUSTOM, 9, 0, false, h.absolutePos(CENTER),
+                h.getLevel().dimension().location(), BuildMode.NORMAL, true, true, BuildRequest.STEP_AUTO, false, true);
+        PlaceJob job = submit(h, req);
+        h.succeedWhen(() -> {
+            h.assertTrue(job.state() == Job.State.FAILED, "La demande aurait dû être refusée (état " + job.state() + ")");
+            h.assertTrue(job.placed() == 0, job.placed() + " blocs posés malgré l'obstacle");
+            h.assertBlockPresent(Blocks.SPONGE, new BlockPos(CENTER.getX(), 3, CENTER.getZ()));
+        });
+    }
+
+    /** Pause manuelle : aucune progression tant que la tâche est en pause. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_pause")
+    public static void manualPauseFreezesProgress(GameTestHelper h) {
+        PlaceJob job = submit(h, request(h, "chateau_fort", SizePreset.SMALL, 0, 0, BuildMode.NORMAL));
+        int[] frozen = {-1};
+        h.runAfterDelay(3, () -> {
+            BuildManager.get().setPaused(null, job.id(), true, true);
+            frozen[0] = job.progress();
+        });
+        h.runAfterDelay(40, () -> {
+            h.assertTrue(job.paused(), "La tâche devrait être en pause");
+            h.assertTrue(job.progress() == frozen[0], "Progression pendant la pause : " + frozen[0] + " → " + job.progress());
+            job.cancel();
+        });
+        h.succeedWhen(() -> h.assertTrue(job.state() == Job.State.CANCELLED, "Annulation en pause non traitée : " + job.state()));
+    }
+
     /** Petite maison, construction gratuite par le serveur (aucun inventaire impliqué). */
     @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_house")
     public static void buildSmallHouse(GameTestHelper h) {

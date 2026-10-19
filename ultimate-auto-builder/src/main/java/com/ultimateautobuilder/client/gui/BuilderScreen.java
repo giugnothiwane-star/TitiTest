@@ -329,7 +329,7 @@ public final class BuilderScreen extends Screen {
     /** Hauteur de la grande miniature selon la place restante sous les commandes. */
     private int detailRows() {
         PlacementController.Settings s = PlacementController.SETTINGS;
-        int r = 6;
+        int r = 8;
         if (s.preset == SizePreset.CUSTOM) {
             r++;
         }
@@ -399,6 +399,25 @@ public final class BuilderScreen extends Screen {
         }).bounds(x + half + 4, y, half, 20).tooltip(Tooltip.create(Component.literal("Intérieur vide : moins de blocs, construction plus rapide"))).build();
         hollow.active = e.hollowable();
         controls.add(addRenderableWidget(hollow));
+        y += ROW_H;
+        String[] steps = {"auto", "couche par couche", "par étapes"};
+        controls.add(addRenderableWidget(Button.builder(Component.literal("Étapes : " + steps[s.stepMode]), b -> {
+            s.stepMode = (s.stepMode + 1) % steps.length;
+            rebuildWidgets();
+        }).bounds(x, y, half, 20).tooltip(Tooltip.create(Component.literal(
+                "Couche par couche ou par étapes : la construction se met en pause, reprenez-la depuis l'historique ou avec /uab resume")))
+                .build()));
+        controls.add(addRenderableWidget(Button.builder(Component.literal("Rythme : " + (s.slow ? "lent" : "normal")), b -> {
+            s.slow = !s.slow;
+            rebuildWidgets();
+        }).bounds(x + half + 4, y, half, 20).build()));
+        y += ROW_H;
+        controls.add(addRenderableWidget(Button.builder(Component.literal("Zone vide uniquement : " + (s.emptyOnly ? "oui" : "non")), b -> {
+            s.emptyOnly = !s.emptyOnly;
+            rebuildWidgets();
+        }).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal(
+                "Refuse de construire si un bloc occupe déjà la zone, et s'arrête si un obstacle apparaît pendant la construction")))
+                .build()));
         y += ROW_H;
         controls.add(addRenderableWidget(Button.builder(Component.literal("Position : " + s.position.label), b -> {
             PlacementController.PositionMode[] all = PlacementController.PositionMode.values();
@@ -497,6 +516,9 @@ public final class BuilderScreen extends Screen {
             if (index++ < listScroll || index - listScroll > visible) {
                 continue;
             }
+            controls.add(addRenderableWidget(Button.builder(Component.literal(j.paused() ? "Reprendre" : "Pause"),
+                    b -> PacketDistributor.sendToServer(new ActionPayload(j.paused() ? ActionPayload.RESUME : ActionPayload.PAUSE, j.id(), "")))
+                    .bounds(x + w - 2 * bw - 4, y, bw, 20).build()));
             controls.add(addRenderableWidget(Button.builder(Component.literal("Annuler"),
                     b -> PacketDistributor.sendToServer(new ActionPayload(ActionPayload.CANCEL, j.id(), ""))).bounds(x + w - bw, y, bw, 20).build()));
             y += ROW_H;
@@ -1187,14 +1209,15 @@ public final class BuilderScreen extends Screen {
         int visible = Math.max(1, (panelH - 14) / ROW_H);
         int y = panelY + 14;
         int index = 0;
-        int textW = width - 16 - 80;
+        int textW = width - 16 - 160;
         SimpleDateFormat fmt = new SimpleDateFormat("dd/MM HH:mm");
         for (StatePayload.JobInfo j : st.jobs()) {
             if (index++ < listScroll || index - listScroll > visible) {
                 continue;
             }
             int pct = j.total() <= 0 ? 0 : (int) Math.min(100, (long) j.progress() * 100 / j.total());
-            String line = "▶ " + j.title() + " — " + pct + "% (" + j.owner() + ")";
+            String line = (j.paused() ? "⏸ " : "▶ ") + j.title() + " — " + pct + "% (" + j.owner() + ")"
+                    + (j.paused() ? " — en pause : " + j.pauseReason() : "");
             g.drawString(font, font.plainSubstrByWidth(line, textW), gridX + 2, y + 6, 0xFF7FE0FF, false);
             y += ROW_H;
         }

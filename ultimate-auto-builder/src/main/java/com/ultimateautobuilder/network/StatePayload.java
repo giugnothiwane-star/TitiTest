@@ -16,7 +16,7 @@ public record StatePayload(boolean canBuild, boolean admin, boolean canImport, i
                            List<String> importable, long corner1, long corner2, boolean hasCorner1, boolean hasCorner2)
         implements CustomPacketPayload {
 
-    public record JobInfo(int id, String title, int progress, int total, int state, String owner) {
+    public record JobInfo(int id, String title, int progress, int total, int state, String owner, boolean paused, String pauseReason) {
     }
 
     public record HistoryInfo(int id, String modelId, String name, int[] bounds, int rotation, int blocks, long startedAt, String status,
@@ -51,6 +51,8 @@ public record StatePayload(boolean canBuild, boolean admin, boolean canImport, i
             buf.writeVarInt(j.total());
             buf.writeVarInt(j.state());
             buf.writeUtf(j.owner(), 64);
+            buf.writeBoolean(j.paused());
+            buf.writeUtf(j.pauseReason(), 256);
         });
         buf.writeVarInt(Math.min(history.size(), MAX_LIST));
         history.stream().limit(MAX_LIST).forEach(h -> {
@@ -99,7 +101,8 @@ public record StatePayload(boolean canBuild, boolean admin, boolean canImport, i
         }
         List<JobInfo> jobs = new ArrayList<>();
         for (int i = 0, n = count(buf); i < n; i++) {
-            jobs.add(new JobInfo(buf.readVarInt(), buf.readUtf(128), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readUtf(64)));
+            jobs.add(new JobInfo(buf.readVarInt(), buf.readUtf(128), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readUtf(64),
+                    buf.readBoolean(), buf.readUtf(256)));
         }
         List<HistoryInfo> history = new ArrayList<>();
         for (int i = 0, n = count(buf); i < n; i++) {

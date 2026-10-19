@@ -59,7 +59,8 @@ public final class ServerPayloadHandler {
         }
         ServerLevel level = player.serverLevel();
         BuildRequest req = new BuildRequest(p.modelId(), SizePreset.byOrdinal(p.preset()), p.customSize(), p.rotation(), p.mirror(),
-                new BlockPos(p.x(), p.y(), p.z()), level.dimension().location(), BuildMode.byOrdinal(p.mode()), p.hollow(), p.confirmGiant());
+                new BlockPos(p.x(), p.y(), p.z()), level.dimension().location(), BuildMode.byOrdinal(p.mode()), p.hollow(), p.confirmGiant(),
+                p.stepMode(), p.slow(), p.emptyOnly());
         try {
             Job job = manager.submit(player, level, req);
             info(player, "Construction de « " + entry.name() + " » lancée (n° " + job.id() + ")");
@@ -88,6 +89,15 @@ public final class ServerPayloadHandler {
                         error(player, "Aucune construction à annuler");
                     } else {
                         info(player, "Annulation demandée : " + j.title());
+                    }
+                }
+                case ActionPayload.PAUSE, ActionPayload.RESUME -> {
+                    boolean pause = p.action() == ActionPayload.PAUSE;
+                    Job j = manager.setPaused(player, p.target(), admin, pause);
+                    if (j == null) {
+                        error(player, "Aucune construction correspondante");
+                    } else {
+                        info(player, (pause ? "Pause : " : "Reprise : ") + j.title());
                     }
                 }
                 case ActionPayload.UNDO -> {
@@ -177,7 +187,8 @@ public final class ServerPayloadHandler {
         List<StatePayload.HistoryInfo> history = new ArrayList<>();
         if (manager != null) {
             for (Job j : manager.jobs()) {
-                jobs.add(new StatePayload.JobInfo(j.id(), j.title(), j.progress(), j.total(), j.state().ordinal(), j.ownerName()));
+                jobs.add(new StatePayload.JobInfo(j.id(), j.title(), j.progress(), j.total(), j.state().ordinal(), j.ownerName(), j.paused(),
+                        j.pauseReason()));
             }
             for (HistoryEntry e : manager.history().snapshot()) {
                 history.add(new StatePayload.HistoryInfo(e.id, e.modelId, e.modelName, e.bounds, e.rotation, e.blocks, e.startedAt, e.status.name(),

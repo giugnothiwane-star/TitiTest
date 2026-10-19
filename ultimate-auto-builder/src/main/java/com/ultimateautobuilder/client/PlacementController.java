@@ -50,6 +50,10 @@ public final class PlacementController {
         public int distance = 6;
         public BlockPos coords;
         public int offX, offY, offZ;
+        /** Pas à pas : 0 automatique, 1 couche par couche, 2 par étapes. */
+        public int stepMode;
+        public boolean slow;
+        public boolean emptyOnly;
 
         public int size() {
             return entry == null ? 0 : entry.sizes().resolve(preset, customSize);
@@ -298,7 +302,7 @@ public final class PlacementController {
     private static void send(Minecraft mc, BlockPos origin, boolean confirmed) {
         Settings s = SETTINGS;
         PacketDistributor.sendToServer(new BuildRequestPayload(s.entry.id(), s.preset.ordinal(), s.customSize, rotation(mc), s.mirror, origin.getX(),
-                origin.getY(), origin.getZ(), s.mode.ordinal(), s.hollow, confirmed));
+                origin.getY(), origin.getZ(), s.mode.ordinal(), s.hollow, confirmed, s.stepMode, s.slow, s.emptyOnly));
         ClientData.addRecent(s.entry.id());
         ClientData.Data d = ClientData.get();
         d.preferredPreset = s.preset.ordinal();

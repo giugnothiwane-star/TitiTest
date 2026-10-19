@@ -15,6 +15,8 @@ public record ActionPayload(int action, int target, String arg) implements Custo
     public static final int IMPORT = 5;
     public static final int SAVE_SELECTION = 6;
     public static final int REQUEST_CUSTOM_PREVIEW = 7;
+    public static final int PAUSE = 8;
+    public static final int RESUME = 9;
 
     public static final Type<ActionPayload> TYPE = new Type<>(UltimateAutoBuilderMod.id("action"));
     public static final StreamCodec<FriendlyByteBuf, ActionPayload> CODEC = StreamCodec.ofMember(ActionPayload::write, ActionPayload::read);

@@ -77,6 +77,12 @@ public final class UabCommand {
                 .then(Commands.literal("cancel")
                         .executes(c -> cancel(c.getSource(), -1))
                         .then(Commands.argument("id", IntegerArgumentType.integer(1)).executes(c -> cancel(c.getSource(), IntegerArgumentType.getInteger(c, "id")))))
+                .then(Commands.literal("pause")
+                        .executes(c -> setPaused(c.getSource(), -1, true))
+                        .then(Commands.argument("id", IntegerArgumentType.integer(1)).executes(c -> setPaused(c.getSource(), IntegerArgumentType.getInteger(c, "id"), true))))
+                .then(Commands.literal("resume")
+                        .executes(c -> setPaused(c.getSource(), -1, false))
+                        .then(Commands.argument("id", IntegerArgumentType.integer(1)).executes(c -> setPaused(c.getSource(), IntegerArgumentType.getInteger(c, "id"), false))))
                 .then(Commands.literal("undo")
                         .executes(c -> undo(c.getSource(), -1))
                         .then(Commands.argument("id", IntegerArgumentType.integer(1)).executes(c -> undo(c.getSource(), IntegerArgumentType.getInteger(c, "id")))))
@@ -161,6 +167,18 @@ public final class UabCommand {
             return 0;
         }
         src.sendSuccess(() -> Component.literal("Annulation demandée : " + j.title()), false);
+        return 1;
+    }
+
+    private static int setPaused(CommandSourceStack src, int id, boolean pause) {
+        ServerPlayer p = src.getPlayer();
+        boolean admin = p == null || Permissions.isAdmin(p);
+        Job j = BuildManager.get().setPaused(p, id, admin, pause);
+        if (j == null) {
+            src.sendFailure(Component.literal("Aucune construction en cours correspondante"));
+            return 0;
+        }
+        src.sendSuccess(() -> Component.literal((pause ? "Construction en pause : " : "Construction reprise : ") + j.title()), false);
         return 1;
     }
 

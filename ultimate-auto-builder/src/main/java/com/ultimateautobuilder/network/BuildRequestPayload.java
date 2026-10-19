@@ -10,7 +10,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
  * le serveur régénère lui-même le modèle et applique toutes les limites.
  */
 public record BuildRequestPayload(String modelId, int preset, int customSize, int rotation, boolean mirror, int x, int y, int z, int mode,
-                                  boolean hollow, boolean confirmGiant) implements CustomPacketPayload {
+                                  boolean hollow, boolean confirmGiant, int stepMode, boolean slow, boolean emptyOnly)
+        implements CustomPacketPayload {
     public static final Type<BuildRequestPayload> TYPE = new Type<>(UltimateAutoBuilderMod.id("build_request"));
     public static final StreamCodec<FriendlyByteBuf, BuildRequestPayload> CODEC = StreamCodec.ofMember(BuildRequestPayload::write,
             BuildRequestPayload::read);
@@ -27,11 +28,14 @@ public record BuildRequestPayload(String modelId, int preset, int customSize, in
         buf.writeVarInt(mode);
         buf.writeBoolean(hollow);
         buf.writeBoolean(confirmGiant);
+        buf.writeVarInt(stepMode);
+        buf.writeBoolean(slow);
+        buf.writeBoolean(emptyOnly);
     }
 
     private static BuildRequestPayload read(FriendlyByteBuf buf) {
         return new BuildRequestPayload(buf.readUtf(128), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readInt(),
-                buf.readInt(), buf.readInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean());
+                buf.readInt(), buf.readInt(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean(), buf.readVarInt(), buf.readBoolean(), buf.readBoolean());
     }
 
     @Override
