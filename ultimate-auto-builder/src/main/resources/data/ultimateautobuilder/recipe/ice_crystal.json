@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " I ",
+    "IDI",
+    " I "
+  ],
+  "key": {
+    "I": {"item": "minecraft:blue_ice"},
+    "D": {"item": "minecraft:diamond"}
+  },
+  "result": {
+    "id": "ultimateautobuilder:ice_crystal",
+    "count": 1
+  }
+}
