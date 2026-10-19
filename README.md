@@ -10,6 +10,16 @@ Documentation, installation et tests : [`cercle/README.md`](cercle/README.md).
 cd cercle && npm install && npm run dev   # http://127.0.0.1:5173 — identifiant « moi », mot de passe « cercle »
 ```
 
+## Ultimate Auto Builder — mod Minecraft NeoForge 1.21.1
+
+Mod Minecraft Java 1.21.1 / NeoForge 21.1 : menu en jeu ouvert avec le Cristal de Glace (clic droit, touche B ou R1 à la manette) pour choisir parmi 403 constructions générées (Pokémon, anime, maisons, châteaux, villes, dragons, statues…), les prévisualiser en fantôme puis les faire construire progressivement par le serveur, avec historique et retour arrière.
+
+Documentation, compilation, tests et rapport de vérification : [`ultimate-auto-builder/README.md`](ultimate-auto-builder/README.md).
+
+```bash
+cd ultimate-auto-builder && ./gradlew build   # JAR dans build/libs/
+```
+
 ## TitiSnake
 
 Snake en un seul fichier (`index.html`), sans dépendance, jouable au clavier et au tactile.
