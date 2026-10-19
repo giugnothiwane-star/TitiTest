@@ -286,16 +286,16 @@ com.ultimateautobuilder
 
 ## Rapport de vérification
 
-Réalisé dans l'environnement de développement (conteneur sans accès aux dépôts Mojang/NeoForge) :
+Réalisé dans l'environnement de développement (conteneur sans accès aux dépôts Mojang/NeoForge) et par la CI :
 
 | Élément | État |
 |---|---|
-| Cœur `core/**` et parties pures du studio | ✅ Compilés localement avec JDK 21 : **63 tests JUnit, 0 échec** |
-| Modèles | ✅ Les 510 modèles générés (tests) ; rendus isométriques PNG inspectés visuellement pour un large échantillon, dont les mobs, les constructions inspirées et des reconstructions d'images |
-| Couche Minecraft/NeoForge (serveur, réseau, client, écrans, shaders) | ✅ **Compilée par la CI** GitHub Actions contre NeoForge 21.1.x (dernière version publiée), avec tests unitaires ; shaders GLSL validés par `glslang` ; signatures d'API vérifiées par une sonde `javap` |
-| GameTests | ✅ Exécutés par la CI dans un vrai serveur Minecraft 1.21.1 (voir le résultat de la dernière exécution dans l'onglet *Actions*) |
-| Client graphique réel (CI) | ✅ Lancé sous affichage virtuel (1280×720, échelle automatique, rendu logiciel Mesa llvmpipe) : captures du catalogue, du grand aperçu 3D, du fantôme, d'une construction posée par le serveur, d'Image → Construction (analyse, aperçu 3D, comparaison, blocs estimés) et du studio, publiées dans la vérification « Captures en jeu ». Elles ont révélé puis permis de corriger : 5 modèles seulement par page, réglages hors de l'écran, aperçu de 32 px, boutons au texte invisible et position « devant moi » sous le monde |
-| Non vérifié | ❌ Interactions humaines (souris, clavier, manette R1), carte graphique réelle, sélecteur de fichiers natif, réception depuis un téléphone, rendu des effets du studio à l'écran, multijoueur sur serveur dédié |
+| Cœur `core/**` et parties pures du studio | ✅ Compilés localement avec JDK 21 : **70 tests JUnit, 0 échec** (dont 7 de progression) |
+| Modèles | ✅ Les 454 modèles générés (tests) ; Pikachu / Pokémon / anime absents (test unitaire + GameTest) |
+| Couche Minecraft/NeoForge (serveur, réseau, client, écrans, shaders) | ✅ **Compilée par la CI** GitHub Actions contre NeoForge 21.1.x, avec tests unitaires ; shaders GLSL validés par `glslang` |
+| GameTests | ✅ Exécutés par la CI dans un vrai serveur Minecraft 1.21.1, dont : maison Sakura construite, Ultimate Crystal seul dans l'onglet créatif et recettes chargées, **progression avec un joueur serveur** (refus d'une construction verrouillée, quête validée par une statistique de minage réelle, coût retiré une seule fois, rien retiré si incomplet, relecture du fichier) |
+| Client graphique réel (CI) | ✅ Lancé sous affichage virtuel (1280×720, rendu logiciel Mesa) : 23 captures publiées dans « Captures en jeu » — catalogue, aperçus 3D, fantôme, construction posée, Image → Construction, studio, **hub de l'Ultimate Crystal** (accueil, quêtes, matériaux, shaders gratuits, maisons), galerie Sakura, **parcours de déblocage complet en survie** (bouton avec coût → écran de confirmation → construction débloquée et matériaux retirés), maison Sakura construite dans le monde, cristal 3D en main. Elles ont révélé puis permis de corriger : cristal non remis à la connexion, bouton Débloquer hors de vue, chevauchement de texte dans le hub, pétales masquant la vue |
+| Non vérifié | ❌ Interactions humaines (souris, clavier, manette R1), carte graphique réelle, sélecteur de fichiers natif, réception depuis un téléphone, rendu visuel des effets de shaders (seul l'état « Actif » est vérifié), **multijoueur sur serveur dédié avec plusieurs joueurs**, chaîne de quêtes au-delà du niveau pierre dans un vrai monde (couverte par les tests unitaires uniquement) |
 | Gains de FPS | ❌ **Aucun chiffre annoncé** : le studio mesure les FPS sur la machine du joueur ; rien n'a été mesuré ici |
 
 ## Limites connues
