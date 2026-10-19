@@ -36,6 +36,18 @@ neoForge {
             type = 'gameTestServer'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
+        // Client de vérification visuelle (CI) : ouvre le monde « uab_capture », parcourt les écrans,
+        // enregistre des captures dans run/screenshots puis quitte. Sans effet sur le mod distribué.
+        captureClient {
+            client()
+            systemProperty 'uab.capture', 'true'
+            programArgument '--quickPlaySingleplayer'
+            programArgument 'uab_capture'
+            programArgument '--width'
+            programArgument '1280'
+            programArgument '--height'
+            programArgument '720'
+        }
         configureEach {
             logLevel = org.slf4j.event.Level.INFO
         }

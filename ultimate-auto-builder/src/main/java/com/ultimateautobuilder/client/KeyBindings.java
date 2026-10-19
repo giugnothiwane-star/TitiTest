@@ -15,6 +15,8 @@ public final class KeyBindings {
 
     public static final KeyMapping OPEN_MENU = new KeyMapping("key.ultimateautobuilder.open_menu", KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, CATEGORY);
+    public static final KeyMapping OPEN_STUDIO = new KeyMapping("key.ultimateautobuilder.open_studio", KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, CATEGORY);
     public static final KeyMapping ROTATE = new KeyMapping("key.ultimateautobuilder.rotate", KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY);
     public static final KeyMapping MIRROR = new KeyMapping("key.ultimateautobuilder.mirror", KeyConflictContext.IN_GAME,
@@ -46,7 +48,7 @@ public final class KeyBindings {
     }
 
     public static void register(RegisterKeyMappingsEvent event) {
-        for (KeyMapping k : new KeyMapping[]{OPEN_MENU, ROTATE, MIRROR, CONFIRM, CANCEL_PREVIEW, MOVE_FORWARD, MOVE_BACK, MOVE_LEFT, MOVE_RIGHT,
+        for (KeyMapping k : new KeyMapping[]{OPEN_MENU, OPEN_STUDIO, ROTATE, MIRROR, CONFIRM, CANCEL_PREVIEW, MOVE_FORWARD, MOVE_BACK, MOVE_LEFT, MOVE_RIGHT,
                 MOVE_UP, MOVE_DOWN, SIZE_UP, SIZE_DOWN, RECENTER}) {
             event.register(k);
         }

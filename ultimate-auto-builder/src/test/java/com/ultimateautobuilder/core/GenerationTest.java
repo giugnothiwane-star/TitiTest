@@ -54,7 +54,7 @@ class GenerationTest {
 
     @Test
     void generationIsDeterministic() {
-        for (String id : new String[]{"pikachu", "chene_geant", "quartier_residentiel", "labyrinthe", "ile_flottante", "village_medieval"}) {
+        for (String id : new String[]{"chevalier", "chene_geant", "quartier_residentiel", "labyrinthe", "ile_flottante", "village_medieval"}) {
             ModelEntry e = catalog.get(id);
             VoxelModel a = e.generate(SizePreset.NORMAL, 0, false);
             VoxelModel b = e.generate(SizePreset.NORMAL, 0, false);
@@ -72,7 +72,7 @@ class GenerationTest {
 
     @Test
     void sculptedCharactersReachTheRequestedHeight() {
-        for (String id : new String[]{"pikachu", "goku", "dracaufeu", "naruto", "statue_liberte", "chene_geant"}) {
+        for (String id : new String[]{"chevalier", "samourai", "dragon_rouge", "viking", "statue_liberte", "chene_geant"}) {
             ModelEntry e = catalog.get(id);
             assertEquals(SizeSpec.Kind.HEIGHT, e.sizes().kind());
             for (SizePreset p : new SizePreset[]{SizePreset.SMALL, SizePreset.NORMAL, SizePreset.LARGE, SizePreset.GIANT}) {
@@ -86,7 +86,8 @@ class GenerationTest {
 
     @Test
     void scalingKeepsProportionsAndHasNoHoles() {
-        ModelEntry e = catalog.get("pikachu");
+        // Statue massive (assise) : une coupe au quart de la hauteur traverse un volume plein.
+        ModelEntry e = catalog.get("bouddha");
         VoxelModel small = e.generate(40, false);
         VoxelModel big = e.generate(80, false);
         double ratioSmall = (double) small.sizeX() / small.sizeY();
@@ -102,7 +103,7 @@ class GenerationTest {
 
     @Test
     void hollowingReducesBlockCountOfGiantStatues() {
-        ModelEntry e = catalog.get("ronflex");
+        ModelEntry e = catalog.get("bouddha");
         VoxelModel full = e.generate(60, false);
         VoxelModel hollow = e.generate(60, true);
         assertTrue(hollow.size() < full.size() * 0.6, full.size() + " → " + hollow.size());
@@ -110,16 +111,27 @@ class GenerationTest {
 
     @Test
     void customSizeIsClamped() {
-        ModelEntry e = catalog.get("pikachu");
+        ModelEntry e = catalog.get("chevalier");
         assertEquals(e.sizes().max(), e.sizes().resolve(SizePreset.CUSTOM, 100_000));
         assertEquals(e.sizes().min(), e.sizes().resolve(SizePreset.CUSTOM, -5));
     }
 
     @Test
     void thumbnailsRender() {
-        VoxelModel m = catalog.get("goku").generate(SizePreset.NORMAL, 0, false);
+        VoxelModel m = catalog.get("samourai").generate(SizePreset.NORMAL, 0, false);
         IsoRenderer.Image img = IsoRenderer.fit(IsoRenderer.render(m, 0, 50_000), 64);
         assertEquals(64 * 64, img.argb().length);
         assertTrue(Arrays.stream(img.argb()).anyMatch(c -> c != 0));
+    }
+
+    @Test
+    void everyPaletteBlockExceptAirHasAVisibleColor() {
+        // Régression : « stairs » contient « air », les toits disparaissaient des miniatures.
+        for (String state : new String[]{"minecraft:oak_stairs[facing=north,half=bottom]", "minecraft:cherry_stairs", "minecraft:quartz_stairs",
+                "minecraft:stone_brick_stairs", "minecraft:hay_block"}) {
+            assertTrue(com.ultimateautobuilder.core.render.ColorTable.rgb(state) >= 0, state);
+        }
+        assertEquals(-1, com.ultimateautobuilder.core.render.ColorTable.rgb("minecraft:air"));
+        assertEquals(-1, com.ultimateautobuilder.core.render.ColorTable.rgb("minecraft:cave_air"));
     }
 }

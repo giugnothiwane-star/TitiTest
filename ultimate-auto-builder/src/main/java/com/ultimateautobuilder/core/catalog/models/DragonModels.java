@@ -39,7 +39,7 @@ public final class DragonModels {
                 "minecraft:red_terracotta", "minecraft:black_concrete", "minecraft:yellow_concrete"), 4, false), "dragon", "feu", "ailes");
         r.sculpt("dragon_glace", "Dragon de glace", 5, D, () -> dragon(new DragonColors("minecraft:light_blue_concrete", WHITE,
                 "minecraft:packed_ice", "minecraft:blue_ice", "minecraft:blue_concrete"), 4, false), "dragon", "glace", "givre");
-        r.sculpt("dragon_ender", "Dragon de l'Ender", 5, D, () -> dragon(new DragonColors(BLACK, "minecraft:gray_concrete",
+        r.sculpt("dragon_ender", "Dragon de l'Ender sculpté", 5, D, () -> dragon(new DragonColors(BLACK, "minecraft:gray_concrete",
                 "minecraft:gray_concrete", "minecraft:gray_concrete", "minecraft:magenta_concrete"), 4, false), "dragon", "ender", "end", "boss");
         r.sculpt("dragon_dore", "Dragon doré", 5, D, () -> dragon(new DragonColors("minecraft:gold_block", "minecraft:yellow_terracotta",
                 "minecraft:orange_concrete", "minecraft:white_concrete", "minecraft:red_concrete"), 4, false), "dragon", "or", "tresor");

@@ -50,6 +50,10 @@ public final class PlacementController {
         public int distance = 6;
         public BlockPos coords;
         public int offX, offY, offZ;
+        /** Pas à pas : 0 automatique, 1 couche par couche, 2 par étapes. */
+        public int stepMode;
+        public boolean slow;
+        public boolean emptyOnly;
 
         public int size() {
             return entry == null ? 0 : entry.sizes().resolve(preset, customSize);
@@ -140,8 +144,19 @@ public final class PlacementController {
                 Direction dir = mc.player.getDirection();
                 int half = model == null ? 4 : Math.max(model.sizeX(), model.sizeZ()) / 2;
                 BlockPos p = mc.player.blockPosition().relative(dir, SETTINGS.distance + half);
-                int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()) - 1;
-                return new BlockPos(p.getX(), y, p.getZ());
+                // Le client ne reçoit que les cartes de hauteur WORLD_SURFACE et MOTION_BLOCKING : on part de
+                // MOTION_BLOCKING puis on descend sous le feuillage pour poser la construction au sol.
+                int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ()) - 1;
+                BlockPos.MutableBlockPos q = new BlockPos.MutableBlockPos(p.getX(), y, p.getZ());
+                int floor = mc.level.getMinBuildHeight();
+                while (q.getY() > floor && mc.level.getBlockState(q).is(net.minecraft.tags.BlockTags.LEAVES)) {
+                    q.move(Direction.DOWN);
+                }
+                if (q.getY() <= floor) {
+                    // Colonne non chargée : hauteur des pieds du joueur.
+                    return new BlockPos(p.getX(), mc.player.blockPosition().getY() - 1, p.getZ());
+                }
+                return q.immutable();
             }
         }
     }
@@ -298,7 +313,7 @@ public final class PlacementController {
     private static void send(Minecraft mc, BlockPos origin, boolean confirmed) {
         Settings s = SETTINGS;
         PacketDistributor.sendToServer(new BuildRequestPayload(s.entry.id(), s.preset.ordinal(), s.customSize, rotation(mc), s.mirror, origin.getX(),
-                origin.getY(), origin.getZ(), s.mode.ordinal(), s.hollow, confirmed));
+                origin.getY(), origin.getZ(), s.mode.ordinal(), s.hollow, confirmed, s.stepMode, s.slow, s.emptyOnly));
         ClientData.addRecent(s.entry.id());
         ClientData.Data d = ClientData.get();
         d.preferredPreset = s.preset.ordinal();

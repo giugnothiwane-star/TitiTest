@@ -8,7 +8,9 @@ public record SizeSpec(Kind kind, int small, int normal, int large, int giant, i
     public enum Kind {
         HEIGHT("hauteur"),
         WIDTH("largeur"),
-        LENGTH("longueur");
+        LENGTH("longueur"),
+        /** Plus grande dimension (mobs : hauteur pour les bipèdes, longueur pour les animaux allongés). */
+        DIMENSION("dimension principale");
 
         private final String label;
 
@@ -37,6 +39,10 @@ public record SizeSpec(Kind kind, int small, int normal, int large, int giant, i
 
     public static SizeSpec length(int small, int normal, int large, int giant) {
         return new SizeSpec(Kind.LENGTH, small, normal, large, giant, Math.max(5, small / 2), giant * 2);
+    }
+
+    public static SizeSpec dimension(int small, int normal, int large, int giant) {
+        return new SizeSpec(Kind.DIMENSION, small, normal, large, giant, Math.max(4, small / 2), giant * 2);
     }
 
     /** Valeur de taille pour un préréglage ; la taille personnalisée est bornée. */

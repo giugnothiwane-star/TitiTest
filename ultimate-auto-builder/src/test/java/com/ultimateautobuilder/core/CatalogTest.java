@@ -48,8 +48,8 @@ class CatalogTest {
 
     @Test
     void searchIgnoresCaseAndAccents() {
-        assertEquals("pikachu", catalog.search("PIKACHU", null, null, Catalog.Sort.NAME).get(0).id());
-        assertFalse(catalog.search("evoli", null, null, Catalog.Sort.NAME).isEmpty());
+        assertTrue(catalog.search("CHEVALIER", null, null, Catalog.Sort.NAME).stream().anyMatch(e -> e.id().equals("chevalier")));
+        assertFalse(catalog.search("girafe", null, null, Catalog.Sort.NAME).isEmpty());
         List<ModelEntry> withAccent = catalog.search("château", null, null, Catalog.Sort.NAME);
         List<ModelEntry> without = catalog.search("chateau", null, null, Catalog.Sort.NAME);
         assertEquals(withAccent, without);
@@ -60,23 +60,24 @@ class CatalogTest {
     void searchFindsCommonTerms() {
         assertTrue(catalog.search("maison", null, null, null).size() >= 30);
         assertTrue(catalog.search("dragon", null, null, null).size() >= 6);
-        assertTrue(catalog.search("goku", null, null, null).size() >= 3);
-        assertTrue(catalog.search("pokemon dracaufeu", null, null, null).size() == 1);
+        assertTrue(catalog.search("samourai", null, null, null).size() >= 1);
+        assertTrue(catalog.search("pikachu", null, null, null).isEmpty(), "Pikachu a été retiré du catalogue");
+        assertTrue(catalog.search("pokemon", null, null, null).isEmpty(), "plus aucun modèle Pokémon");
         assertTrue(catalog.search("zzzz introuvable", null, null, null).isEmpty());
     }
 
     @Test
     void searchByCategoryAndSort() {
-        List<ModelEntry> pokemons = catalog.search("", Category.POKEMON, null, Catalog.Sort.NAME);
-        assertEquals(catalog.count(Category.POKEMON), pokemons.size());
-        for (int i = 1; i < pokemons.size(); i++) {
-            assertTrue(Catalog.comparator(Catalog.Sort.NAME).compare(pokemons.get(i - 1), pokemons.get(i)) <= 0);
+        List<ModelEntry> houses = catalog.search("", Category.HOUSES, null, Catalog.Sort.NAME);
+        assertEquals(catalog.count(Category.HOUSES), houses.size());
+        for (int i = 1; i < houses.size(); i++) {
+            assertTrue(Catalog.comparator(Catalog.Sort.NAME).compare(houses.get(i - 1), houses.get(i)) <= 0);
         }
         List<ModelEntry> bySize = catalog.search("", null, null, Catalog.Sort.SIZE);
         for (int i = 1; i < bySize.size(); i++) {
             assertTrue(bySize.get(i - 1).sizes().normal() <= bySize.get(i).sizes().normal());
         }
-        List<ModelEntry> favorites = catalog.search("", null, Catalog.idIn(List.of("goku", "pikachu")), Catalog.Sort.NAME);
+        List<ModelEntry> favorites = catalog.search("", null, Catalog.idIn(List.of("samourai", "chevalier", "modele_inexistant")), Catalog.Sort.NAME);
         assertEquals(2, favorites.size());
     }
 

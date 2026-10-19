@@ -1,5 +1,6 @@
 package com.ultimateautobuilder.client.render;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.ultimateautobuilder.client.PlacementController;
@@ -74,6 +75,22 @@ public final class PreviewRenderer {
 
         if (!ClientConfig.loaded() || ClientConfig.GHOST_PREVIEW.get()) {
             int maxFaces = ClientConfig.loaded() ? ClientConfig.GHOST_MAX_FACES.get() : 40_000;
+            BlockMesh mesh = ghost(model, rotation, mirror, maxFaces);
+            if (mesh != null) {
+                // Fantôme texturé : vrais modèles de blocs, semi-transparents, décalés en profondeur
+                // pour ne pas scintiller contre les blocs déjà présents.
+                pose.pushPose();
+                pose.translate(origin.getX(), origin.getY() + lift, origin.getZ());
+                Matrix4f mv = new Matrix4f(RenderSystem.getModelViewMatrix()).mul(pose.last().pose());
+                RenderSystem.enablePolygonOffset();
+                RenderSystem.polygonOffset(-1f, -10f);
+                mesh.draw(mv, RenderSystem.getProjectionMatrix());
+                RenderSystem.polygonOffset(0f, 0f);
+                RenderSystem.disablePolygonOffset();
+                pose.popPose();
+                pose.popPose();
+                return;
+            }
             Faces faces = faces(model, rotation, mirror, maxFaces);
             if (faces != null && faces.count() > 0) {
                 pose.pushPose();
@@ -85,6 +102,61 @@ public final class PreviewRenderer {
             }
         }
         pose.popPose();
+    }
+
+    private static final java.util.concurrent.ExecutorService GHOST_WORKER = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "UAB-Ghost");
+        t.setDaemon(true);
+        t.setPriority(Thread.MIN_PRIORITY);
+        return t;
+    });
+    private static BlockMesh ghostMesh;
+    private static Object[] ghostKey, pendingKey, failedKey;
+    private static CompletableFuture<BlockMesh.Built> ghostPending;
+
+    private static boolean sameKey(Object[] k, VoxelModel model, int rotation, boolean mirror) {
+        return k != null && k[0] == model && (Integer) k[1] == rotation && (Boolean) k[2] == mirror;
+    }
+
+    /**
+     * Maillage texturé du fantôme, ou null tant qu'il se construit, s'il dépasse la limite de faces
+     * ou en cas d'échec : les faces colorées servent alors de repli.
+     */
+    private static BlockMesh ghost(VoxelModel model, int rotation, boolean mirror, int maxFaces) {
+        if (sameKey(ghostKey, model, rotation, mirror)) {
+            return ghostMesh;
+        }
+        if (ghostPending != null && ghostPending.isDone()) {
+            BlockMesh.Built b = ghostPending.getNow(null);
+            Object[] k = pendingKey;
+            ghostPending = null;
+            pendingKey = null;
+            if (b == null || b.truncated()) {
+                if (b != null) {
+                    b.discard();
+                }
+                failedKey = k;
+            } else if (sameKey(k, model, rotation, mirror)) {
+                if (ghostMesh != null) {
+                    ghostMesh.close();
+                }
+                ghostMesh = BlockMesh.upload(b);
+                ghostKey = k;
+                return ghostMesh;
+            } else {
+                b.discard();
+            }
+        }
+        if (ghostPending == null && !sameKey(failedKey, model, rotation, mirror)) {
+            Object[] k = {model, rotation, mirror};
+            pendingKey = k;
+            ghostPending = CompletableFuture.supplyAsync(() -> BlockMesh.build(BlockMesh.placed(model, rotation, mirror), 0.6f, maxFaces * 2),
+                    GHOST_WORKER).exceptionally(t -> {
+                        com.ultimateautobuilder.UltimateAutoBuilderMod.LOGGER.warn("Fantôme texturé impossible : {}", t.toString());
+                        return null;
+                    });
+        }
+        return null;
     }
 
     /** Faces du cache, ou null si le calcul est en cours (le cadre reste affiché en attendant). */
@@ -216,5 +288,11 @@ public final class PreviewRenderer {
     public static void reset() {
         current = null;
         pending = null;
+        if (ghostMesh != null) {
+            ghostMesh.close();
+            ghostMesh = null;
+        }
+        ghostKey = null;
+        failedKey = null;
     }
 }

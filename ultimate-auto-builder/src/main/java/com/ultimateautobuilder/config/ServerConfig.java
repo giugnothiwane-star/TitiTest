@@ -60,6 +60,7 @@ public final class ServerConfig {
     public static final ModConfigSpec.BooleanValue SINGLEPLAYER_ALWAYS_ALLOWED;
     public static final ModConfigSpec.BooleanValue GIVE_CRYSTAL_ON_FIRST_JOIN;
 
+    public static final ModConfigSpec.EnumValue<ProgressionMode> PROGRESSION_MODE;
     public static final ModConfigSpec.IntValue HISTORY_SIZE;
     public static final ModConfigSpec.BooleanValue UNDO_PRUDENT;
     public static final ModConfigSpec.IntValue CHECKPOINT_SECONDS;
@@ -112,7 +113,12 @@ public final class ServerConfig {
         b.comment("Permissions").push("permissions");
         PERMISSION_LEVEL = b.comment("Niveau d'opérateur requis pour construire (0 = tout le monde)").defineInRange("permissionLevel", 2, 0, 4);
         SINGLEPLAYER_ALWAYS_ALLOWED = b.define("singleplayerAlwaysAllowed", true);
-        GIVE_CRYSTAL_ON_FIRST_JOIN = b.define("giveCrystalOnFirstJoin", false);
+        GIVE_CRYSTAL_ON_FIRST_JOIN = b.define("giveCrystalOnFirstJoin", true);
+        b.pop();
+
+        b.comment("Progression : niveaux d'architecte, quêtes et déblocage des constructions par matériaux").push("progression");
+        PROGRESSION_MODE = b.comment("CREATIVE_FREE : progression en survie, tout est accessible en créatif ; ALWAYS : progression pour tous ; "
+                + "OFF : toutes les constructions sont accessibles").defineEnum("progressionMode", ProgressionMode.CREATIVE_FREE);
         b.pop();
 
         b.comment("Historique et annulation").push("history");
@@ -126,6 +132,9 @@ public final class ServerConfig {
 
     private ServerConfig() {
     }
+
+    /** Application de la progression. */
+    public enum ProgressionMode { CREATIVE_FREE, ALWAYS, OFF }
 
     public static boolean loaded() {
         return SPEC.isLoaded();
@@ -172,6 +181,7 @@ public final class ServerConfig {
         m.put("hollowLargeStatues", HOLLOW_STATUES);
         m.put("aerialHeight", AERIAL_HEIGHT);
         m.put("restrictToSelection", RESTRICT_TO_SELECTION);
+        m.put("progressionMode", PROGRESSION_MODE);
         m.put("historySize", HISTORY_SIZE);
         m.put("prudentUndo", UNDO_PRUDENT);
         return m;

@@ -9,6 +9,7 @@ import com.ultimateautobuilder.client.GamepadInput;
 import com.ultimateautobuilder.client.PlacementController;
 import com.ultimateautobuilder.client.ProgressHud;
 import com.ultimateautobuilder.client.ThumbnailCache;
+import com.ultimateautobuilder.client.render.ModelPreviews;
 import com.ultimateautobuilder.config.ClientConfig;
 import com.ultimateautobuilder.core.catalog.Catalog;
 import com.ultimateautobuilder.core.catalog.Category;
@@ -46,7 +47,7 @@ import java.util.function.Predicate;
  * de détail (taille, rotation, miroir, mode, position), historique et modèles personnalisés.
  * Utilisable à la souris, au clavier et à la manette. Le serveur revalide chaque demande.
  */
-public final class BuilderScreen extends Screen {
+public final class BuilderScreen extends ScaledScreen {
     private enum Page { CATALOG, HISTORY, CUSTOM }
 
     /** Zone ayant le focus manette : grille de cartes ou commandes (détail / listes). */
@@ -55,8 +56,8 @@ public final class BuilderScreen extends Screen {
     private record Tab(String label, Category category, int special) {
     }
 
-    private static final int SPECIAL_NONE = 0, SPECIAL_ALL = 1, SPECIAL_FAVORITES = 2, SPECIAL_RECENTS = 3;
-    private static final int CARD_W = 62, CARD_H = 74, GAP = 4, ROW_H = 22;
+    private static final int SPECIAL_NONE = 0, SPECIAL_ALL = 1, SPECIAL_FAVORITES = 2, SPECIAL_RECENTS = 3, SPECIAL_UNLOCKED = 4;
+    private static final int CARD_W = 70, CARD_H = 80, GAP = 4, ROW_H = 22;
     private static final String[] SIZE_FILTERS = {"Toutes tailles", "Petites", "Moyennes", "Grandes"};
     private static final String[] ROTATIONS = {"0°", "90°", "180°", "270°"};
 
@@ -84,6 +85,11 @@ public final class BuilderScreen extends Screen {
     private Zone zone = Zone.GRID;
     private int controlFocus;
     private int thumbView;
+    // Aperçu 3D : orientation et zoom manipulés à la souris.
+    private float previewYaw, previewPitch = ModelPreviews.BASE_PITCH, previewZoom = 1f;
+    // Défilement des réglages du panneau de détail.
+    private int detailScroll, maxDetailScroll, controlsTop;
+    private boolean previewTouched, previewDragging, previewDragged;
     private boolean lastCanBuild;
 
     // Géométrie calculée dans init().
@@ -92,12 +98,60 @@ public final class BuilderScreen extends Screen {
     private int tabsY, tabsX0, tabsX1;
     private EditBox searchBox;
 
+    /** Écran d'origine (menu principal du cristal), rouvert à la fermeture. */
+    private final net.minecraft.client.gui.screens.Screen parent;
+    /** Section demandée à l'ouverture : onglet ou page à sélectionner une fois les onglets construits. */
+    private String startSection;
+
     public BuilderScreen() {
+        this(null, null);
+    }
+
+    /**
+     * @param section « houses », « sakura », « unlocked », « favorites », « history », « custom » ou null
+     */
+    public BuilderScreen(net.minecraft.client.gui.screens.Screen parent, String section) {
         super(Component.literal("Ultimate Auto Builder"));
+        this.parent = parent;
+        this.startSection = section;
         if (!initialized) {
             initialized = true;
             applyPreferences();
         }
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.ultimateautobuilder.network.ActionPayload(
+                com.ultimateautobuilder.network.ActionPayload.OPENED, 1, ""));
+    }
+
+    /** Applique la section demandée par le menu principal (après la construction des onglets). */
+    private void applyStartSection() {
+        if (startSection == null || tabs.isEmpty()) {
+            return;
+        }
+        String sec = startSection;
+        startSection = null;
+        switch (sec) {
+            case "history" -> page = Page.HISTORY;
+            case "custom" -> page = Page.CUSTOM;
+            default -> {
+                page = Page.CATALOG;
+                for (int i = 0; i < tabs.size(); i++) {
+                    Tab t = tabs.get(i);
+                    boolean match = switch (sec) {
+                        case "unlocked" -> t.special() == SPECIAL_UNLOCKED;
+                        case "favorites" -> t.special() == SPECIAL_FAVORITES;
+                        case "sakura" -> t.category() == Category.SAKURA;
+                        case "houses" -> t.category() == Category.HOUSES;
+                        default -> sec.startsWith("cat:") && t.category() != null && t.category().key().equals(sec.substring(4));
+                    };
+                    if (match) {
+                        tabIndex = i;
+                        tabScroll = Math.max(0, i - 2);
+                        pageIndex = 0;
+                    }
+                }
+            }
+        }
+        recompute();
     }
 
     /** Reprend les préférences sauvegardées (taille, orientation, mode, position…). */
@@ -150,6 +204,7 @@ public final class BuilderScreen extends Screen {
         view = c;
         buildTabs();
         recompute();
+        applyStartSection();
     }
 
     /** Entrée locale pour un modèle personnalisé du serveur ; mêmes tailles que côté serveur. */
@@ -172,6 +227,7 @@ public final class BuilderScreen extends Screen {
         tabs.add(new Tab("Tout (" + view.size() + ")", null, SPECIAL_ALL));
         tabs.add(new Tab("★ Favoris", null, SPECIAL_FAVORITES));
         tabs.add(new Tab("Récents", null, SPECIAL_RECENTS));
+        tabs.add(new Tab("Débloquées", null, SPECIAL_UNLOCKED));
         for (Category c : Category.values()) {
             tabs.add(new Tab(c.displayName() + " (" + view.count(c) + ")", c, SPECIAL_NONE));
         }
@@ -194,6 +250,10 @@ public final class BuilderScreen extends Screen {
             Predicate<ModelEntry> in = Catalog.idIn(new HashSet<>(ids));
             filter = filter == null ? in : filter.and(in);
         }
+        if (tab.special() == SPECIAL_UNLOCKED) {
+            Predicate<ModelEntry> open = com.ultimateautobuilder.client.ClientProgress::isUnlocked;
+            filter = filter == null ? open : filter.and(open);
+        }
         List<ModelEntry> found = view.search(query, tab.category(), filter, sort);
         if (tab.special() == SPECIAL_RECENTS && query.isBlank()) {
             // Les récents restent dans l'ordre d'utilisation, plus parlant qu'un tri alphabétique.
@@ -213,10 +273,24 @@ public final class BuilderScreen extends Screen {
         return view.get(selectedId);
     }
 
+    /** Mode capture (CI) : sélectionne un modèle par identifiant. */
+    public void captureSelect(String modelId) {
+        ModelEntry e = com.ultimateautobuilder.core.catalog.models.DefaultCatalog.shared().get(modelId);
+        if (e != null) {
+            select(e);
+            rebuildWidgets();
+        }
+    }
+
     private void select(ModelEntry e) {
         selectedId = e == null ? null : e.id();
         PlacementController.SETTINGS.entry = e;
         thumbView = 0;
+        previewYaw = 0f;
+        previewPitch = ModelPreviews.BASE_PITCH;
+        previewZoom = 1f;
+        previewTouched = false;
+        detailScroll = 0;
         if (e != null) {
             ClientModels.request(e, PlacementController.SETTINGS.size(), PlacementController.SETTINGS.hollow);
         }
@@ -225,7 +299,7 @@ public final class BuilderScreen extends Screen {
     // ------------------------------------------------------------------ mise en page
 
     @Override
-    protected void init() {
+    protected void initScaled() {
         refreshView();
         compact = width < 560;
         int margin = 8;
@@ -303,7 +377,7 @@ public final class BuilderScreen extends Screen {
     }
 
     private void initBottomBar(int y) {
-        int n = 4;
+        int n = 5;
         int bw = Math.min(110, (width - 16 - (n - 1) * 4) / n);
         int x = (width - (n * bw + (n - 1) * 4)) / 2;
         addRenderableWidget(Button.builder(Component.literal(page == Page.HISTORY ? "Catalogue" : "Historique"),
@@ -312,7 +386,9 @@ public final class BuilderScreen extends Screen {
                 b -> setPage(page == Page.CUSTOM ? Page.CATALOG : Page.CUSTOM)).bounds(x + bw + 4, y, bw, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Paramètres"), b -> minecraft.setScreen(new SettingsScreen(this)))
                 .bounds(x + 2 * (bw + 4), y, bw, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Fermer"), b -> onClose()).bounds(x + 3 * (bw + 4), y, bw, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Depuis une image"),
+                b -> minecraft.setScreen(new com.ultimateautobuilder.client.image.ImageBuildScreen(this))).bounds(x + 3 * (bw + 4), y, bw, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Fermer"), b -> onClose()).bounds(x + 4 * (bw + 4), y, bw, 20).build());
     }
 
     private void setPage(Page p) {
@@ -329,7 +405,7 @@ public final class BuilderScreen extends Screen {
     /** Hauteur de la grande miniature selon la place restante sous les commandes. */
     private int detailRows() {
         PlacementController.Settings s = PlacementController.SETTINGS;
-        int r = 6;
+        int r = 8;
         if (s.preset == SizePreset.CUSTOM) {
             r++;
         }
@@ -355,13 +431,38 @@ public final class BuilderScreen extends Screen {
         int w = panelW - 8;
         int half = (w - 4) / 2;
         int textH = 34;
-        thumbSize = Math.max(32, Math.min(compact ? 72 : 112, panelH - detailRows() * ROW_H - textH - 8));
-        int y = panelY + thumbSize + textH + 4;
+        // Aperçu de taille confortable ; les réglages défilent dessous (molette) s'ils ne tiennent pas.
+        thumbSize = Math.max(64, Math.min(compact ? 120 : 170, (int) (panelH * 0.45)));
+        controlsTop = panelY + thumbSize + textH + 4;
+        int y = controlsTop - detailScroll;
 
+        // Construction verrouillée : le déblocage passe en tête, visible sans faire défiler.
+        boolean unlockedEntry = com.ultimateautobuilder.client.ClientProgress.isUnlocked(e);
+        if (!unlockedEntry) {
+            // Déblocage : le serveur vérifie le niveau et retire les matériaux une seule fois.
+            var rule = com.ultimateautobuilder.core.progression.ProgressionRules.rule(e);
+            boolean tierOk = com.ultimateautobuilder.client.ClientProgress.tier().atLeast(rule.tier());
+            // Confirmation explicite : le coût unique est rappelé avant tout retrait de matériaux.
+            Button unlock = Button.builder(Component.literal(tierOk ? "§eDébloquer : " + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost()) : "§7Niveau requis : " + rule.tier().label), b -> minecraft.setScreen(new net.minecraft.client.gui.screens.ConfirmScreen(yes -> {
+                if (yes) {
+                    net.neoforged.neoforge.network.PacketDistributor.sendToServer(new com.ultimateautobuilder.network.ActionPayload(
+                            com.ultimateautobuilder.network.ActionPayload.UNLOCK, 0, e.id()));
+                }
+                minecraft.setScreen(this);
+            }, Component.literal("Débloquer « " + e.name() + " » ?"), Component.literal("Coût unique retiré de votre inventaire : "
+                    + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost())
+                    + "\nCe coût est distinct des blocs nécessaires à la construction.")))).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal("Niveau : " + rule.tier().label + "\nCoût unique : "
+                    + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost())
+                    + (tierOk ? "" : "\n§cNiveau insuffisant : avancez dans les quêtes du cristal")))).build();
+            unlock.active = tierOk;
+            controls.add(addRenderableWidget(unlock));
+            y += ROW_H;
+        }
         controls.add(addRenderableWidget(Button.builder(Component.literal(sizeLabel(e)), b -> {
             cycleSize(1);
             rebuildWidgets();
-        }).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal("Petit, Normal, Grand, Géant ou taille personnalisée"))).build()));
+        }).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal("Petit, Normal, Grand, Géant ou taille personnalisée — mesure : "
+                + e.sizes().kind().label()))).build()));
         y += ROW_H;
         if (s.preset == SizePreset.CUSTOM) {
             EditBox custom = new EditBox(font, x + 1, y + 1, w - 2, 18, Component.literal("Taille personnalisée"));
@@ -374,7 +475,7 @@ public final class BuilderScreen extends Screen {
                     ClientModels.request(e, s.size(), s.hollow);
                 }
             });
-            custom.setTooltip(Tooltip.create(Component.literal("Entre " + e.sizes().min() + " et " + e.sizes().max() + " blocs de " + e.sizes().kind().label())));
+            custom.setTooltip(Tooltip.create(Component.literal("Entre " + e.sizes().min() + " et " + e.sizes().max() + " blocs (" + e.sizes().kind().label() + ")")));
             controls.add(addRenderableWidget(custom));
             y += ROW_H;
         }
@@ -399,6 +500,25 @@ public final class BuilderScreen extends Screen {
         }).bounds(x + half + 4, y, half, 20).tooltip(Tooltip.create(Component.literal("Intérieur vide : moins de blocs, construction plus rapide"))).build();
         hollow.active = e.hollowable();
         controls.add(addRenderableWidget(hollow));
+        y += ROW_H;
+        String[] steps = {"auto", "couche par couche", "par étapes"};
+        controls.add(addRenderableWidget(Button.builder(Component.literal("Étapes : " + steps[s.stepMode]), b -> {
+            s.stepMode = (s.stepMode + 1) % steps.length;
+            rebuildWidgets();
+        }).bounds(x, y, half, 20).tooltip(Tooltip.create(Component.literal(
+                "Couche par couche ou par étapes : la construction se met en pause, reprenez-la depuis l'historique ou avec /uab resume")))
+                .build()));
+        controls.add(addRenderableWidget(Button.builder(Component.literal("Rythme : " + (s.slow ? "lent" : "normal")), b -> {
+            s.slow = !s.slow;
+            rebuildWidgets();
+        }).bounds(x + half + 4, y, half, 20).build()));
+        y += ROW_H;
+        controls.add(addRenderableWidget(Button.builder(Component.literal("Zone vide uniquement : " + (s.emptyOnly ? "oui" : "non")), b -> {
+            s.emptyOnly = !s.emptyOnly;
+            rebuildWidgets();
+        }).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal(
+                "Refuse de construire si un bloc occupe déjà la zone, et s'arrête si un obstacle apparaît pendant la construction")))
+                .build()));
         y += ROW_H;
         controls.add(addRenderableWidget(Button.builder(Component.literal("Position : " + s.position.label), b -> {
             PlacementController.PositionMode[] all = PlacementController.PositionMode.values();
@@ -446,8 +566,10 @@ public final class BuilderScreen extends Screen {
         StatePayload st = ClientState.state();
         Button build = Button.builder(Component.literal("§lCONSTRUIRE"), b -> PlacementController.requestBuild(minecraft, this))
                 .bounds(x, y, w, 20).build();
-        build.active = st == null || st.canBuild();
-        if (!build.active) {
+        build.active = (st == null || st.canBuild()) && unlockedEntry;
+        if (!unlockedEntry) {
+            build.setTooltip(Tooltip.create(Component.literal("Construction verrouillée : débloquez-la d'abord")));
+        } else if (!build.active) {
             build.setTooltip(Tooltip.create(Component.literal("Vous n'avez pas la permission de construire sur ce serveur")));
         }
         controls.add(addRenderableWidget(build));
@@ -458,6 +580,31 @@ public final class BuilderScreen extends Screen {
                 zone = Zone.GRID;
                 rebuildWidgets();
             }).bounds(x, y, w, 20).build()));
+            y += ROW_H;
+        }
+        layoutControls(y + detailScroll - controlsTop);
+    }
+
+    /** Masque les réglages hors du panneau et garde visible celui qui a le focus (manette, clavier). */
+    private void layoutControls(int contentH) {
+        int bottom = panelY + panelH;
+        int viewH = Math.max(1, bottom - controlsTop);
+        maxDetailScroll = Math.max(0, contentH - viewH);
+        int clamped = Math.max(0, Math.min(detailScroll, maxDetailScroll));
+        int shift = detailScroll - clamped;
+        if (zone == Zone.CONTROLS && controlFocus >= 0 && controlFocus < controls.size()) {
+            AbstractWidget f = controls.get(controlFocus);
+            int fy = f.getY() + shift;
+            if (fy < controlsTop) {
+                shift += controlsTop - fy;
+            } else if (fy + f.getHeight() > bottom) {
+                shift -= fy + f.getHeight() - bottom;
+            }
+        }
+        detailScroll = Math.max(0, Math.min(maxDetailScroll, detailScroll - shift));
+        for (AbstractWidget w : controls) {
+            w.setY(w.getY() + shift);
+            w.visible = w.getY() >= controlsTop && w.getY() + w.getHeight() <= bottom;
         }
     }
 
@@ -497,6 +644,9 @@ public final class BuilderScreen extends Screen {
             if (index++ < listScroll || index - listScroll > visible) {
                 continue;
             }
+            controls.add(addRenderableWidget(Button.builder(Component.literal(j.paused() ? "Reprendre" : "Pause"),
+                    b -> PacketDistributor.sendToServer(new ActionPayload(j.paused() ? ActionPayload.RESUME : ActionPayload.PAUSE, j.id(), "")))
+                    .bounds(x + w - 2 * bw - 4, y, bw, 20).build()));
             controls.add(addRenderableWidget(Button.builder(Component.literal("Annuler"),
                     b -> PacketDistributor.sendToServer(new ActionPayload(ActionPayload.CANCEL, j.id(), ""))).bounds(x + w - bw, y, bw, 20).build()));
             y += ROW_H;
@@ -642,9 +792,20 @@ public final class BuilderScreen extends Screen {
         }
     }
 
+    private static String tierShort(com.ultimateautobuilder.core.progression.Tier t) {
+        return switch (t) {
+            case DEBUTANT -> "Débutant";
+            case PIERRE -> "Pierre";
+            case FER -> "Fer";
+            case DIAMANT -> "Diamant";
+            case NETHERITE -> "Netherite";
+        };
+    }
+
     private static String sizeLabel(ModelEntry e) {
         PlacementController.Settings s = PlacementController.SETTINGS;
-        return "Taille : " + s.preset.displayName() + " (" + e.sizes().resolve(s.preset, s.customSize) + " de " + e.sizes().kind().label() + ")";
+        // Libellé court (le bouton est étroit) ; la nature de la mesure est dans l'infobulle.
+        return "Taille : " + s.preset.displayName() + " · " + e.sizes().resolve(s.preset, s.customSize) + " blocs";
     }
 
     private static String modeHelp(BuildMode m) {
@@ -897,8 +1058,8 @@ public final class BuilderScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (super.mouseClicked(mx, my, button)) {
+    protected boolean mouseClickedScaled(double mx, double my, int button) {
+        if (super.mouseClickedScaled(mx, my, button)) {
             return true;
         }
         if (button != 0) {
@@ -932,22 +1093,65 @@ public final class BuilderScreen extends Screen {
                 return true;
             }
         }
-        // Clic sur la grande miniature : vue suivante.
-        if (page == Page.CATALOG && selected() != null && (!compact || detailOpen) && mx >= panelX + (panelW - thumbSize) / 2.0
-                && mx < panelX + (panelW + thumbSize) / 2.0 && my >= panelY && my < panelY + thumbSize) {
-            thumbView = (thumbView + 1) & 3;
+        // Grand aperçu : glisser pour tourner ; un simple clic passe au quart de tour suivant.
+        if (overPreview(mx, my)) {
+            previewDragging = true;
+            previewDragged = false;
             return true;
         }
         return false;
     }
 
+    private boolean overPreview(double mx, double my) {
+        return page == Page.CATALOG && selected() != null && (!compact || detailOpen) && mx >= panelX + 4 && mx < panelX + panelW - 4
+                && my >= panelY && my < panelY + thumbSize;
+    }
+
     @Override
-    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
-        if (super.mouseScrolled(mx, my, sx, sy)) {
+    protected boolean mouseDraggedScaled(double mx, double my, int button, double dx, double dy) {
+        if (previewDragging && button == 0) {
+            previewDragged = true;
+            if (!previewTouched) {
+                // On fige la rotation automatique là où elle en est pour éviter un saut.
+                previewYaw += (float) ((System.currentTimeMillis() % 36000L) / 100.0);
+                previewTouched = true;
+            }
+            previewYaw += (float) dx * 1.2f;
+            previewPitch = Math.max(-89f, Math.min(89f, previewPitch + (float) dy * 1.2f));
+            return true;
+        }
+        return super.mouseDraggedScaled(mx, my, button, dx, dy);
+    }
+
+    @Override
+    protected boolean mouseReleasedScaled(double mx, double my, int button) {
+        if (previewDragging && button == 0) {
+            previewDragging = false;
+            if (!previewDragged && overPreview(mx, my)) {
+                thumbView = (thumbView + 1) & 3;
+            }
+            return true;
+        }
+        return super.mouseReleasedScaled(mx, my, button);
+    }
+
+    @Override
+    protected boolean mouseScrolledScaled(double mx, double my, double sx, double sy) {
+        if (super.mouseScrolledScaled(mx, my, sx, sy)) {
             return true;
         }
         if (my >= tabsY && my < tabsY + 14) {
             tabScroll = Math.max(0, Math.min(tabs.size() - 1, tabScroll - (int) Math.signum(sy)));
+            return true;
+        }
+        if (page == Page.CATALOG && selected() != null && (!compact || detailOpen) && mx >= panelX && mx < panelX + panelW
+                && my >= controlsTop && my < panelY + panelH && maxDetailScroll > 0 && sy != 0) {
+            detailScroll = Math.max(0, Math.min(maxDetailScroll, detailScroll - (int) Math.signum(sy) * ROW_H));
+            rebuildWidgets();
+            return true;
+        }
+        if (overPreview(mx, my) && sy != 0) {
+            previewZoom = Math.max(0.4f, Math.min(4f, previewZoom * (sy > 0 ? 1.15f : 1 / 1.15f)));
             return true;
         }
         if (sy != 0) {
@@ -980,7 +1184,16 @@ public final class BuilderScreen extends Screen {
         if (before != viewVersion && (page != Page.CATALOG || canBuild != lastCanBuild || selected() == null && selectedId != null)) {
             rebuildWidgets();
         }
+        // Déblocage ou quête validée par le serveur : verrous et boutons à jour.
+        long pv = com.ultimateautobuilder.client.ClientProgress.version();
+        if (pv != progressVersion) {
+            progressVersion = pv;
+            recompute();
+            rebuildWidgets();
+        }
     }
+
+    private long progressVersion = com.ultimateautobuilder.client.ClientProgress.version();
 
     @Override
     public boolean isPauseScreen() {
@@ -990,7 +1203,11 @@ public final class BuilderScreen extends Screen {
     @Override
     public void onClose() {
         ClientData.save();
-        super.onClose();
+        if (parent != null) {
+            minecraft.setScreen(parent);
+        } else {
+            super.onClose();
+        }
     }
 
     // ------------------------------------------------------------------ rendu
@@ -1008,8 +1225,8 @@ public final class BuilderScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mx, int my, float pt) {
-        super.render(g, mx, my, pt);
+    protected void renderScaled(GuiGraphics g, int mx, int my, float pt) {
+        super.renderScaled(g, mx, my, pt);
         g.drawString(font, "§b❄ §fUltimate Auto Builder", 8, 5, 0xFFFFFFFF);
         renderTabs(g, mx, my);
         switch (page) {
@@ -1061,28 +1278,57 @@ public final class BuilderScreen extends Screen {
             return;
         }
         RenderSystem.enableBlend();
+        ModelEntry hovered = null;
         for (int i = 0; i < per && start + i < results.size(); i++) {
             ModelEntry e = results.get(start + i);
             int x = gridX + (i % cols) * (CARD_W + GAP);
             int y = gridY + (i / cols) * (CARD_H + GAP);
             boolean sel = e.id().equals(selectedId);
             boolean hover = mx >= x && mx < x + CARD_W && my >= y && my < y + CARD_H;
+            if (hover) {
+                hovered = e;
+            }
             g.fill(x, y, x + CARD_W, y + CARD_H, sel ? 0xE0204A66 : hover ? 0xD0303040 : 0xC0181820);
             g.renderOutline(x, y, CARD_W, CARD_H, sel ? (zone == Zone.GRID ? 0xFF7FE0FF : 0xFF4FA0C0) : 0xFF333344);
-            ResourceLocation tex = ThumbnailCache.get(e, 0);
             int ts = 52;
             int tx = x + (CARD_W - ts) / 2;
-            if (tex != null) {
-                g.blit(tex, tx, y + 3, ts, ts, 0, 0, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE);
-            } else {
-                g.drawCenteredString(font, "…", x + CARD_W / 2, y + 24, 0xFF666666);
+            // Rendu 3D texturé ; miniature isométrique en attendant que le maillage soit prêt.
+            if (!ModelPreviews.drawCard(g, e, x + 2, y + 2, CARD_W - 4, ts + 2, 0)) {
+                ResourceLocation tex = ThumbnailCache.get(e, 0);
+                RenderSystem.enableBlend();
+                if (tex != null) {
+                    g.blit(tex, tx, y + 3, ts, ts, 0, 0, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE);
+                } else {
+                    g.drawCenteredString(font, "…", x + CARD_W / 2, y + 24, 0xFF666666);
+                }
             }
             if (ClientData.isFavorite(e.id())) {
                 g.drawString(font, "★", x + CARD_W - 9, y + 2, 0xFFFFD040, true);
             }
-            String name = font.plainSubstrByWidth(e.name(), CARD_W - 4);
-            g.drawCenteredString(font, name, x + CARD_W / 2, y + CARD_H - 17, 0xFFFFFFFF);
-            g.drawCenteredString(font, "★".repeat(e.complexity()), x + CARD_W / 2, y + CARD_H - 8, 0xFF8899AA);
+            if (!com.ultimateautobuilder.client.ClientProgress.isUnlocked(e)) {
+                // Construction verrouillée : voile et niveau requis.
+                var rule = com.ultimateautobuilder.core.progression.ProgressionRules.rule(e);
+                g.fill(x + 1, y + 1, x + CARD_W - 1, y + CARD_H - 23, 0x90101018);
+                g.drawCenteredString(font, "§6Verrouillée", x + CARD_W / 2, y + 16, 0xFFFFFFFF);
+                g.drawCenteredString(font, "§7" + tierShort(rule.tier()), x + CARD_W / 2, y + 28, 0xFFFFFFFF);
+            }
+            // Nom sur deux lignes au plus ; le nom complet s'affiche au survol.
+            java.util.List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(e.name()), CARD_W - 4);
+            for (int l = 0; l < Math.min(2, lines.size()); l++) {
+                net.minecraft.util.FormattedCharSequence line = lines.get(l);
+                if (l == 1 && lines.size() > 2) {
+                    String rest = font.plainSubstrByWidth(e.name().substring(Math.min(e.name().length(), firstLineLength(e.name()))), CARD_W - 12);
+                    line = Component.literal(rest.strip() + "…").getVisualOrderText();
+                }
+                g.drawCenteredString(font, line, x + CARD_W / 2, y + CARD_H - 21 + l * 10, 0xFFFFFFFF);
+            }
+        }
+        if (hovered != null) {
+            java.util.List<Component> tip = new java.util.ArrayList<>();
+            tip.add(Component.literal(hovered.name()).withStyle(net.minecraft.ChatFormatting.WHITE));
+            tip.add(Component.literal(hovered.category().displayName() + " · complexité " + "★".repeat(hovered.complexity()))
+                    .withStyle(net.minecraft.ChatFormatting.GRAY));
+            g.renderComponentTooltip(font, tip, mx, my);
         }
         int maxPage = Math.max(0, (results.size() - 1) / per);
         String info = results.size() + " modèle" + (results.size() > 1 ? "s" : "") + " — page " + (pageIndex + 1) + "/" + (maxPage + 1);
@@ -1092,25 +1338,54 @@ public final class BuilderScreen extends Screen {
         }
     }
 
+    /** Longueur (en caractères) de la première ligne affichée dans une carte. */
+    private int firstLineLength(String name) {
+        java.util.List<net.minecraft.network.chat.FormattedText> parts = font.getSplitter().splitLines(name, CARD_W - 4,
+                net.minecraft.network.chat.Style.EMPTY);
+        return parts.isEmpty() ? name.length() : parts.get(0).getString().length();
+    }
+
     private void renderDetail(GuiGraphics g) {
         ModelEntry e = selected();
         if (e == null) {
             return;
         }
         PlacementController.Settings s = PlacementController.SETTINGS;
-        ResourceLocation tex = ThumbnailCache.get(e, thumbView);
         int tx = panelX + (panelW - thumbSize) / 2;
-        RenderSystem.enableBlend();
-        if (tex != null) {
-            g.blit(tex, tx, panelY, thumbSize, thumbSize, 0, 0, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE);
-        } else {
-            g.drawCenteredString(font, "Génération de l'aperçu…", panelX + panelW / 2, panelY + thumbSize / 2, 0xFF888888);
+        VoxelModel dm = ClientModels.now(e, s.size(), s.hollow);
+        int pw = panelW - 8;
+        g.fill(panelX + 4, panelY, panelX + 4 + pw, panelY + thumbSize, 0x50000000);
+        // Rotation automatique lente tant que le joueur ne manipule pas l'aperçu.
+        float spin = previewTouched ? 0f : (float) ((System.currentTimeMillis() % 36000L) / 100.0);
+        float yaw = ModelPreviews.BASE_YAW - 90f * thumbView + previewYaw + spin;
+        if (!ModelPreviews.drawDetail(g, e, dm, s.size() + "/" + s.hollow, panelX + 4, panelY, pw, thumbSize, yaw, previewPitch, previewZoom)) {
+            ResourceLocation tex = ThumbnailCache.get(e, thumbView);
+            RenderSystem.enableBlend();
+            if (tex != null) {
+                g.blit(tex, tx, panelY, thumbSize, thumbSize, 0, 0, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE, ThumbnailCache.SIZE);
+            } else {
+                g.drawCenteredString(font, "Génération de l'aperçu…", panelX + panelW / 2, panelY + thumbSize / 2, 0xFF888888);
+            }
         }
-        g.drawString(font, "⟳", tx + thumbSize - 8, panelY + thumbSize - 9, 0xFF6688AA, false);
+        g.drawString(font, "§7glisser : tourner · molette : zoom", panelX + 6, panelY + thumbSize - 9, 0xFF8899AA, false);
+        if (maxDetailScroll > 0) {
+            // Barre de défilement des réglages.
+            int top = controlsTop, bottom = panelY + panelH, track = bottom - top;
+            int bar = Math.max(12, track * track / (track + maxDetailScroll));
+            int by = top + (track - bar) * detailScroll / maxDetailScroll;
+            g.fill(panelX + panelW - 3, top, panelX + panelW - 1, bottom, 0x40FFFFFF);
+            g.fill(panelX + panelW - 3, by, panelX + panelW - 1, by + bar, 0xC0A0D8FF);
+        }
         int y = panelY + thumbSize + 2;
         g.drawString(font, font.plainSubstrByWidth("§l" + e.name(), panelW - 8), panelX + 4, y, 0xFFFFFFFF);
-        g.drawString(font, font.plainSubstrByWidth(e.category().displayName() + " · complexité " + e.complexity() + "/5", panelW - 8), panelX + 4, y + 11,
-                0xFF99AABB, false);
+        String info;
+        if (com.ultimateautobuilder.client.ClientProgress.isUnlocked(e)) {
+            info = e.category().displayName() + " · complexité " + e.complexity() + "/5";
+        } else {
+            var rule = com.ultimateautobuilder.core.progression.ProgressionRules.rule(e);
+            info = "§6Verrouillée§7 · " + tierShort(rule.tier()) + " · " + com.ultimateautobuilder.client.ClientProgress.describe(rule.cost());
+        }
+        g.drawString(font, font.plainSubstrByWidth(info, panelW - 8), panelX + 4, y + 11, 0xFF99AABB, false);
         VoxelModel m = ClientModels.now(e, s.size(), s.hollow);
         String dims;
         if (m == null) {
@@ -1145,7 +1420,7 @@ public final class BuilderScreen extends Screen {
     /** Ordonnée de la ligne « distance » (entre les boutons − et +), ou -1. */
     private int rowOfDistance() {
         for (AbstractWidget w : controls) {
-            if (w instanceof Button b && "−".equals(b.getMessage().getString())) {
+            if (w instanceof Button b && b.visible && "−".equals(b.getMessage().getString())) {
                 return b.getY();
             }
         }
@@ -1162,14 +1437,15 @@ public final class BuilderScreen extends Screen {
         int visible = Math.max(1, (panelH - 14) / ROW_H);
         int y = panelY + 14;
         int index = 0;
-        int textW = width - 16 - 80;
+        int textW = width - 16 - 160;
         SimpleDateFormat fmt = new SimpleDateFormat("dd/MM HH:mm");
         for (StatePayload.JobInfo j : st.jobs()) {
             if (index++ < listScroll || index - listScroll > visible) {
                 continue;
             }
             int pct = j.total() <= 0 ? 0 : (int) Math.min(100, (long) j.progress() * 100 / j.total());
-            String line = "▶ " + j.title() + " — " + pct + "% (" + j.owner() + ")";
+            String line = (j.paused() ? "⏸ " : "▶ ") + j.title() + " — " + pct + "% (" + j.owner() + ")"
+                    + (j.paused() ? " — en pause : " + j.pauseReason() : "");
             g.drawString(font, font.plainSubstrByWidth(line, textW), gridX + 2, y + 6, 0xFF7FE0FF, false);
             y += ROW_H;
         }

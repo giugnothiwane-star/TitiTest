@@ -2,8 +2,7 @@ package com.ultimateautobuilder.core.catalog;
 
 /** Catégories du catalogue, avec l'objectif de répartition du cahier des charges. */
 public enum Category {
-    POKEMON("pokemon", "Pokémon", 40),
-    ANIME("anime", "Anime et personnages", 35),
+    SAKURA("sakura", "Maisons Sakura et japonaises", 20),
     HOUSES("houses", "Maisons et villas", 45),
     CASTLES("castles", "Châteaux et médiéval", 30),
     CITIES("cities", "Villes et bâtiments urbains", 35),
@@ -15,9 +14,11 @@ public enum Category {
     VEHICLES("vehicles", "Véhicules et machines", 20),
     SCIFI("scifi", "Science-fiction et espace", 20),
     DUNGEONS("dungeons", "Donjons et temples", 20),
-    PIXELART("pixelart", "Pixel art et sculptures", 15),
+    PIXELART("pixelart", "Pixel art et sculptures", 14),
     HUMOR("humor", "Structures humoristiques", 10),
     MISC("misc", "Structures diverses", 15),
+    MOBS("mobs", "Mobs Minecraft", 88),
+    INSPIRED("inspirations", "Inspirations (vos images)", 19),
     CUSTOM("custom", "Structures personnalisées", 0);
 
     private final String key;

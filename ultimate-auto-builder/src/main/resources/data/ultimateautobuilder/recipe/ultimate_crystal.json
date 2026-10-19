@@ -2,16 +2,17 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    " I ",
-    "IDI",
-    " I "
+    " P ",
+    "ADA",
+    " A "
   ],
   "key": {
-    "I": {"item": "minecraft:blue_ice"},
+    "P": {"item": "minecraft:pink_petals"},
+    "A": {"item": "minecraft:amethyst_shard"},
     "D": {"item": "minecraft:diamond"}
   },
   "result": {
-    "id": "ultimateautobuilder:ice_crystal",
+    "id": "ultimateautobuilder:ultimate_crystal",
     "count": 1
   }
 }

@@ -68,7 +68,13 @@ public final class PlaceJob extends Job {
     private int skippedConflicts;
     private int skippedFluids;
     private boolean resumed;
-    private boolean cancelRequested;
+    /** Vérification « zone vide uniquement » : curseur et obstacles trouvés. */
+    private int checkCursor;
+    private int obstacles;
+    private boolean zoneChecked;
+    /** Curseur auquel la dernière pause d'étape a eu lieu (évite de s'arrêter deux fois au même endroit). */
+    private int lastStepPause = -1;
+    private boolean foundationPauseDone;
     private boolean ticketsAdded;
     private long waitStart;
     private final BlockPos.MutableBlockPos cursorPos = new BlockPos.MutableBlockPos();
@@ -86,7 +92,7 @@ public final class PlaceJob extends Job {
         this.request = request;
         this.entry = entry;
         boolean cfg = ServerConfig.loaded();
-        this.replaceExisting = (!cfg || ServerConfig.REPLACE_EXISTING.get()) && request.mode() != BuildMode.PRUDENT;
+        this.replaceExisting = (!cfg || ServerConfig.REPLACE_EXISTING.get()) && request.mode() != BuildMode.PRUDENT && !request.emptyOnly();
         this.protectValuable = !cfg || ServerConfig.PROTECT_VALUABLE.get();
         this.protectedIds = cfg ? ServerConfig.protectedBlocks() : Set.of();
         this.fluidMode = cfg ? ServerConfig.FLUID_MODE.get() : ServerConfig.FluidMode.REPLACE;
@@ -119,6 +125,9 @@ public final class PlaceJob extends Job {
         skippedProtected = t.getInt("skippedProtected");
         skippedConflicts = t.getInt("skippedConflicts");
         skippedFluids = t.getInt("skippedFluids");
+        zoneChecked = t.getBoolean("zoneChecked") || cursor > 0;
+        lastStepPause = t.contains("lastStepPause") ? t.getInt("lastStepPause") : -1;
+        foundationPauseDone = t.getBoolean("foundationPauseDone");
         if (savedUndo != null) {
             undo = savedUndo;
         }
@@ -199,11 +208,23 @@ public final class PlaceJob extends Job {
                 return 0;
             }
             case PLACING -> {
+                if (request.slow()) {
+                    // Rythme lent : un sixième du budget, pour regarder la construction s'élever.
+                    budget = Math.max(4, budget / 6);
+                }
+                if (request.emptyOnly() && !zoneChecked) {
+                    return checkZone(level, budget * 4, deadline);
+                }
                 int done = 0;
                 if (phase == 0) {
                     done += placeFoundation(level, budget, deadline);
                     if (foundationCursor >= foundation.size()) {
                         phase = 1;
+                        if (request.stepMode() != BuildRequest.STEP_AUTO && !foundation.isEmpty() && !foundationPauseDone) {
+                            foundationPauseDone = true;
+                            pause("fondations terminées");
+                            return done;
+                        }
                     }
                 }
                 if (phase == 1) {
@@ -368,6 +389,77 @@ public final class PlaceJob extends Job {
         return done;
     }
 
+    /**
+     * Option « zone vide uniquement » : chaque position de la structure doit être de l'air ou un bloc
+     * remplaçable (herbe haute, neige…). La vérification est répartie sur plusieurs ticks.
+     */
+    private int checkZone(ServerLevel level, int budget, long deadline) {
+        Placement pl = plan.placement;
+        VoxelModel m = plan.model;
+        int done = 0;
+        while (checkCursor < plan.order.length && done < budget) {
+            if ((done & 63) == 0 && System.nanoTime() > deadline) {
+                return done;
+            }
+            long cell = m.cell(plan.order[checkCursor++]);
+            if (states[VoxelModel.stateId(cell)].isAir()) {
+                continue;
+            }
+            cursorPos.set(pl.worldX(cell), pl.worldY(cell), pl.worldZ(cell));
+            if (!level.isLoaded(cursorPos)) {
+                checkCursor--;
+                return done;
+            }
+            BlockState cur = level.getBlockState(cursorPos);
+            if (!cur.isAir() && !cur.canBeReplaced()) {
+                obstacles++;
+            }
+            done++;
+        }
+        if (checkCursor >= plan.order.length) {
+            zoneChecked = true;
+            if (obstacles > 0) {
+                fail("Zone non vide : " + obstacles + " bloc(s) gênant(s). Option « zone vide uniquement » active : rien n'a été posé");
+            }
+        }
+        return done;
+    }
+
+    /** Vrai si le mode pas à pas impose une pause avant de poser la cellule d'indice {@code index} de l'ordre. */
+    private boolean stepBoundary(int index) {
+        int mode = request.stepMode();
+        if (mode == BuildRequest.STEP_AUTO || index == lastStepPause || index == 0) {
+            return false;
+        }
+        if (index == plan.solidCount) {
+            return true; // passage aux éléments accrochés (portes, torches, plantes, fluides)
+        }
+        if (index > plan.solidCount) {
+            return false;
+        }
+        int y = VoxelModel.cy(plan.model.cell(plan.order[index]));
+        int prevY = VoxelModel.cy(plan.model.cell(plan.order[index - 1]));
+        if (y == prevY) {
+            return false;
+        }
+        if (mode == BuildRequest.STEP_LAYER) {
+            return true;
+        }
+        int h = Math.max(1, plan.model.sizeY());
+        return (y * 4) / h != (prevY * 4) / h;
+    }
+
+    private String stepLabel(int index) {
+        if (index == plan.solidCount) {
+            return "structure terminée, prochaine étape : détails (portes, lumières, plantes)";
+        }
+        int y = VoxelModel.cy(plan.model.cell(plan.order[index]));
+        int h = Math.max(1, plan.model.sizeY());
+        return request.stepMode() == BuildRequest.STEP_LAYER
+                ? "couche " + y + "/" + (h - 1) + " terminée"
+                : "étape " + ((y * 4) / h) + "/4 terminée";
+    }
+
     private int placeMain(ServerLevel level, int budget, long deadline) {
         int done = 0;
         int minY = level.getMinBuildHeight(), maxY = level.getMaxBuildHeight();
@@ -375,6 +467,11 @@ public final class PlaceJob extends Job {
         VoxelModel m = plan.model;
         while (cursor < plan.order.length && done < budget) {
             if ((done & 31) == 0 && System.nanoTime() > deadline) {
+                break;
+            }
+            if (stepBoundary(cursor)) {
+                lastStepPause = cursor;
+                pause(stepLabel(cursor));
                 break;
             }
             long cell = m.cell(plan.order[cursor]);
@@ -414,6 +511,10 @@ public final class PlaceJob extends Job {
         boolean replaceable = current.isAir() || current.canBeReplaced();
         if (!replaceable && !replaceExisting) {
             skippedConflicts++;
+            if (request.emptyOnly() && !paused) {
+                // Un bloc est apparu depuis la vérification : on s'arrête plutôt que de construire autour.
+                pause("obstacle apparu en " + pos.getX() + " " + pos.getY() + " " + pos.getZ());
+            }
             return;
         }
         if (fluidMode == ServerConfig.FluidMode.KEEP && !current.getFluidState().isEmpty()) {
@@ -548,6 +649,9 @@ public final class PlaceJob extends Job {
         t.putInt("skippedProtected", skippedProtected);
         t.putInt("skippedConflicts", skippedConflicts);
         t.putInt("skippedFluids", skippedFluids);
+        t.putBoolean("zoneChecked", zoneChecked);
+        t.putInt("lastStepPause", lastStepPause);
+        t.putBoolean("foundationPauseDone", foundationPauseDone);
         t.put("undo", undo.save());
         return t;
     }

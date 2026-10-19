@@ -1,0 +1,74 @@
+{
+  "targets": [
+    "swap",
+    "blur_a",
+    "blur_b"
+  ],
+  "passes": [
+    {
+      "name": "ultimateautobuilder:uab_bright",
+      "intarget": "minecraft:main",
+      "outtarget": "blur_b"
+    },
+    {
+      "name": "blur",
+      "intarget": "blur_b",
+      "outtarget": "blur_a",
+      "uniforms": [
+        {
+          "name": "BlurDir",
+          "values": [
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "name": "Radius",
+          "values": [
+            6.0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "blur",
+      "intarget": "blur_a",
+      "outtarget": "blur_b",
+      "uniforms": [
+        {
+          "name": "BlurDir",
+          "values": [
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "Radius",
+          "values": [
+            6.0
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ultimateautobuilder:uab_grade_bloom",
+      "intarget": "minecraft:main",
+      "outtarget": "swap",
+      "auxtargets": [
+        {
+          "name": "DepthSampler",
+          "id": "minecraft:main:depth"
+        },
+        {
+          "name": "BloomSampler",
+          "id": "blur_b"
+        }
+      ]
+    },
+    {
+      "name": "blit",
+      "intarget": "swap",
+      "outtarget": "minecraft:main"
+    }
+  ]
+}

@@ -13,8 +13,23 @@ import com.ultimateautobuilder.core.catalog.SizePreset;
 import com.ultimateautobuilder.core.catalog.models.DefaultCatalog;
 import com.ultimateautobuilder.core.model.B;
 import com.ultimateautobuilder.core.model.VoxelModel;
+import com.ultimateautobuilder.config.ServerConfig;
+import com.ultimateautobuilder.core.progression.ItemCost;
+import com.ultimateautobuilder.core.progression.PlayerProgress;
+import com.ultimateautobuilder.core.progression.ProgressionRules;
+import com.ultimateautobuilder.core.progression.Tier;
+import com.ultimateautobuilder.core.progression.UnlockRule;
+import com.ultimateautobuilder.progression.ProgressManager;
+import com.ultimateautobuilder.registry.ModCreativeTabs;
 import com.ultimateautobuilder.registry.ModItems;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.stats.Stats;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -71,6 +86,58 @@ public final class UabGameTests {
         return n;
     }
 
+    /** Mode couche par couche : la tâche se met en pause, puis se termine après des reprises successives. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 2400, batch = "uab_steps")
+    public static void stepModePausesAndResumes(GameTestHelper h) {
+        BuildRequest req = new BuildRequest("maison_bois", SizePreset.CUSTOM, 9, 0, false, h.absolutePos(CENTER),
+                h.getLevel().dimension().location(), BuildMode.NORMAL, true, true, BuildRequest.STEP_LAYER, false, false);
+        PlaceJob job = submit(h, req);
+        int[] pauses = new int[1];
+        h.onEachTick(() -> {
+            if (job.paused()) {
+                pauses[0]++;
+                h.assertTrue(job.progress() < job.total(), "Pause alors que tout est posé");
+                job.resume();
+            }
+        });
+        h.succeedWhen(() -> {
+            h.assertTrue(job.state() != Job.State.FAILED, "Échec : " + job.message());
+            h.assertTrue(job.state() == Job.State.DONE, "Construction en cours : " + job.state());
+            h.assertTrue(pauses[0] >= 3, "Trop peu de pauses en mode couche par couche : " + pauses[0]);
+        });
+    }
+
+    /** Option « zone vide uniquement » : un obstacle dans l'emprise fait échouer la demande sans rien poser. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_empty")
+    public static void emptyOnlyRefusesObstacles(GameTestHelper h) {
+        h.setBlock(new BlockPos(CENTER.getX(), 3, CENTER.getZ()), Blocks.SPONGE);
+        BuildRequest req = new BuildRequest("maison_bois", SizePreset.CUSTOM, 9, 0, false, h.absolutePos(CENTER),
+                h.getLevel().dimension().location(), BuildMode.NORMAL, true, true, BuildRequest.STEP_AUTO, false, true);
+        PlaceJob job = submit(h, req);
+        h.succeedWhen(() -> {
+            h.assertTrue(job.state() == Job.State.FAILED, "La demande aurait dû être refusée (état " + job.state() + ")");
+            h.assertTrue(job.placed() == 0, job.placed() + " blocs posés malgré l'obstacle");
+            h.assertBlockPresent(Blocks.SPONGE, new BlockPos(CENTER.getX(), 3, CENTER.getZ()));
+        });
+    }
+
+    /** Pause manuelle : aucune progression tant que la tâche est en pause. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_pause")
+    public static void manualPauseFreezesProgress(GameTestHelper h) {
+        PlaceJob job = submit(h, request(h, "chateau_fort", SizePreset.SMALL, 0, 0, BuildMode.NORMAL));
+        int[] frozen = {-1};
+        h.runAfterDelay(3, () -> {
+            BuildManager.get().setPaused(null, job.id(), true, true);
+            frozen[0] = job.progress();
+        });
+        h.runAfterDelay(40, () -> {
+            h.assertTrue(job.paused(), "La tâche devrait être en pause");
+            h.assertTrue(job.progress() == frozen[0], "Progression pendant la pause : " + frozen[0] + " → " + job.progress());
+            job.cancel();
+        });
+        h.succeedWhen(() -> h.assertTrue(job.state() == Job.State.CANCELLED, "Annulation en pause non traitée : " + job.state()));
+    }
+
     /** Petite maison, construction gratuite par le serveur (aucun inventaire impliqué). */
     @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_house")
     public static void buildSmallHouse(GameTestHelper h) {
@@ -84,26 +151,18 @@ public final class UabGameTests {
         });
     }
 
-    /** Personnage sculpté (Pikachu) en petite taille, avec rotation. */
-    @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_pikachu")
-    public static void buildPikachu(GameTestHelper h) {
-        PlaceJob job = submit(h, request(h, "pikachu", SizePreset.SMALL, 0, 1, BuildMode.NORMAL));
+    /** Statue sculptée (samouraï) en petite taille avec rotation ; Pikachu n'existe plus dans le catalogue. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_statue")
+    public static void buildRotatedStatue(GameTestHelper h) {
+        h.assertTrue(DefaultCatalog.shared().get("pikachu") == null, "Pikachu est encore présent dans le catalogue");
+        PlaceJob job = submit(h, request(h, "samourai", SizePreset.SMALL, 0, 1, BuildMode.NORMAL));
         h.succeedWhen(() -> {
             h.assertTrue(job.state() != Job.State.FAILED, "Échec : " + job.message());
             h.assertTrue(job.state() == Job.State.DONE, "Construction en cours : " + job.state());
             int[] b = job.bounds();
             h.assertTrue(b[4] - b[1] + 1 >= 6, "Hauteur inattendue : " + (b[4] - b[1] + 1));
-            boolean yellow = false;
-            BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-            for (int x = b[0]; x <= b[3] && !yellow; x++) {
-                for (int y = b[1]; y <= b[4] && !yellow; y++) {
-                    for (int z = b[2]; z <= b[5] && !yellow; z++) {
-                        BlockState s = h.getLevel().getBlockState(p.set(x, y, z));
-                        yellow = s.is(Blocks.YELLOW_CONCRETE) || s.is(Blocks.YELLOW_WOOL) || s.is(Blocks.YELLOW_TERRACOTTA) || s.is(Blocks.GOLD_BLOCK);
-                    }
-                }
-            }
-            h.assertTrue(yellow, "Aucun bloc jaune : le modèle Pikachu n'a pas été posé correctement");
+            int placed = countNonAir(h.getLevel(), b);
+            h.assertTrue(placed >= job.total() * 9 / 10, "Blocs posés : " + placed + " / " + job.total());
         });
     }
 
@@ -224,11 +283,174 @@ public final class UabGameTests {
         h.succeed();
     }
 
-    /** L'objet Cristal de Glace est enregistré sous un identifiant stable. */
+    /** Tous les blocs proposés par Image-to-Build existent dans cette version du jeu. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 20, batch = "uab_image_palette")
+    public static void imagePaletteResolves(GameTestHelper h) {
+        List<String> unknown = new ArrayList<>();
+        var all = com.ultimateautobuilder.core.image.BlockPalette.of(java.util.EnumSet.allOf(com.ultimateautobuilder.core.image.BlockPalette.Family.class));
+        for (var e : all.entries()) {
+            if (BlockResolver.resolve(e.state()).fallback()) {
+                unknown.add(e.state());
+            }
+        }
+        h.assertTrue(unknown.isEmpty(), "Blocs inconnus : " + unknown);
+        h.succeed();
+    }
+
+    /** Chaîne complète : image de synthèse → analyse → reconstruction → format réseau → construction par le moteur. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 2400, batch = "uab_image_build")
+    public static void imageModelBuilds(GameTestHelper h) {
+        int w = 60, hh = 50;
+        int[] px = new int[w * hh];
+        for (int y = 0; y < hh; y++) {
+            for (int x = 0; x < w; x++) {
+                boolean wall = y >= 25 && y < 48 && x >= 10 && x < 50;
+                boolean roof = y >= 8 && y < 25 && Math.abs(x - 30) <= (y - 8) * 22 / 17;
+                px[y * w + x] = wall ? 0xFF8A8A8A : roof ? 0xFFB0302A : 0xFFFFFFFF;
+            }
+        }
+        var a = com.ultimateautobuilder.core.image.ImageAnalysis.analyze(new com.ultimateautobuilder.core.image.ImageData(w, hh, px));
+        var o = new com.ultimateautobuilder.core.image.Reconstructor.Options(com.ultimateautobuilder.core.image.Reconstructor.Mode.BUILDING, null,
+                null, null, 0, 14, 8, null, true, a.best().subject(), false, false);
+        var r = com.ultimateautobuilder.core.image.Reconstructor.reconstruct(com.ultimateautobuilder.core.image.Reconstructor.Views.single(a), o);
+        VoxelModel model;
+        try {
+            byte[] data = com.ultimateautobuilder.core.importer.ModelCodec.encode("Maison image", r.model().toVoxelModel());
+            model = com.ultimateautobuilder.core.importer.ModelCodec.decode(data, com.ultimateautobuilder.config.ServerConfig.limits()).model();
+        } catch (Exception e) {
+            h.fail("Encodage du modèle impossible : " + e.getMessage());
+            return;
+        }
+        h.assertTrue(model.size() == r.model().count(), "Blocs perdus à l'encodage : " + model.size() + " / " + r.model().count());
+        var entry = com.ultimateautobuilder.storage.CustomModelStore.register("gametest_image", "Maison image", model);
+        PlaceJob job = submit(h, request(h, entry.id(), SizePreset.NORMAL, 0, 0, BuildMode.NORMAL));
+        h.succeedWhen(() -> {
+            h.assertTrue(job.state() != Job.State.FAILED, "Échec : " + job.message());
+            h.assertTrue(job.state() == Job.State.DONE, "Construction en cours : " + job.state());
+            int placed = countNonAir(h.getLevel(), job.bounds());
+            h.assertTrue(placed >= model.size() * 9 / 10, "Blocs posés : " + placed + " / " + model.size());
+        });
+    }
+
+    /**
+     * Cristal unique : l'Ultimate Crystal est enregistré, fabricable, seul objet de l'onglet créatif ;
+     * les anciens cristaux restent enregistrés (mondes existants) et convertibles.
+     */
     @GameTest(template = TEMPLATE, timeoutTicks = 20, batch = "uab_item")
     public static void crystalRegistered(GameTestHelper h) {
-        h.assertTrue(ModItems.ICE_CRYSTAL.getId().toString().equals("ultimateautobuilder:ice_crystal"), "Identifiant inattendu");
-        h.assertTrue(ModItems.ICE_CRYSTAL.get().getDefaultInstance().getMaxStackSize() == 1, "Le cristal doit être non empilable");
+        h.assertTrue(ModItems.ULTIMATE_CRYSTAL.getId().toString().equals("ultimateautobuilder:ultimate_crystal"), "Identifiant inattendu");
+        h.assertTrue(ModItems.ULTIMATE_CRYSTAL.get().getDefaultInstance().getMaxStackSize() == 1, "Le cristal doit être non empilable");
+        h.assertTrue(ModItems.ICE_CRYSTAL.getId().toString().equals("ultimateautobuilder:ice_crystal"), "Ancien cristal absent du registre");
+        h.assertTrue(ModItems.VISUAL_CRYSTAL.getId().toString().equals("ultimateautobuilder:visual_crystal"), "Ancien cristal visuel absent du registre");
+        var recipes = h.getLevel().getServer().getRecipeManager();
+        for (String r : new String[]{"ultimate_crystal", "ultimate_crystal_from_ice_crystal", "ultimate_crystal_from_visual_crystal"}) {
+            h.assertTrue(recipes.byKey(UltimateAutoBuilderMod.id(r)).isPresent(), "Recette absente : " + r);
+        }
+        CreativeModeTab tab = ModCreativeTabs.MAIN.get();
+        tab.buildContents(new CreativeModeTab.ItemDisplayParameters(h.getLevel().enabledFeatures(), false, h.getLevel().registryAccess()));
+        List<String> items = tab.getDisplayItems().stream().map(s -> BuiltInRegistries.ITEM.getKey(s.getItem()).toString()).toList();
+        h.assertTrue(items.equals(List.of("ultimateautobuilder:ultimate_crystal")), "Onglet créatif inattendu : " + items);
         h.succeed();
+    }
+
+    /** Une maison de la collection Sakura se construit entièrement dans un vrai monde. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 2400, batch = "uab_sakura")
+    public static void buildSakuraHouse(GameTestHelper h) {
+        ModelEntry e = DefaultCatalog.shared().get("sakura_petite_maison");
+        h.assertTrue(e != null, "Maison Sakura absente du catalogue");
+        PlaceJob job = submit(h, request(h, "sakura_petite_maison", SizePreset.SMALL, 0, 0, BuildMode.NORMAL));
+        h.succeedWhen(() -> {
+            h.assertTrue(job.state() != Job.State.FAILED, "Échec : " + job.message());
+            h.assertTrue(job.state() == Job.State.DONE, "Construction en cours : " + job.state());
+            int placed = countNonAir(h.getLevel(), job.bounds());
+            h.assertTrue(placed >= job.total() * 9 / 10, "Blocs posés : " + placed + " / " + job.total());
+        });
+    }
+
+    /**
+     * Progression avec un vrai joueur serveur : construction verrouillée refusée, quêtes validées
+     * sur les statistiques réelles, matériaux retirés une seule fois, état relu depuis le disque.
+     */
+    @GameTest(template = TEMPLATE, timeoutTicks = 40, batch = "uab_progress")
+    public static void progressionUnlocksWithRealInventory(GameTestHelper h) {
+        ServerPlayer player = h.makeMockServerPlayerInLevel();
+        ServerConfig.ProgressionMode before = ServerConfig.PROGRESSION_MODE.get();
+        // Le joueur factice est en créatif : la progression est forcée pour ce test.
+        ServerConfig.PROGRESSION_MODE.set(ServerConfig.ProgressionMode.ALWAYS);
+        try {
+            ProgressManager.forget(player.getUUID());
+            ModelEntry locked = null;
+            for (ModelEntry e : DefaultCatalog.shared().all()) {
+                if (ProgressionRules.rule(e).tier() == Tier.PIERRE && !ProgressionRules.rule(e).cost().isEmpty()) {
+                    locked = e;
+                    break;
+                }
+            }
+            h.assertTrue(locked != null, "Aucune construction de niveau pierre");
+            UnlockRule rule = ProgressionRules.rule(locked);
+            h.assertFalse(ProgressManager.canBuild(player, locked), "Construction verrouillée acceptée");
+            String refused = null;
+            try {
+                BuildManager.get().submit(player, h.getLevel(), request(h, locked.id(), SizePreset.SMALL, 0, 0, BuildMode.NORMAL));
+            } catch (IllegalStateException ex) {
+                refused = ex.getMessage();
+            }
+            h.assertTrue(refused != null && refused.contains("verrouillée"), "Le serveur doit refuser une construction verrouillée : " + refused);
+            h.assertTrue(ProgressManager.unlock(player, locked.id()).status() == PlayerProgress.UnlockStatus.TIER_TOO_LOW, "Niveau non vérifié");
+
+            // Chaîne de quêtes jusqu'au niveau pierre, sur des faits réels.
+            h.assertTrue(ProgressManager.claim(player, "decouverte").status() == PlayerProgress.ClaimStatus.NOT_READY, "Quête validée sans action");
+            ProgressManager.markOpened(player, false);
+            h.assertTrue(ProgressManager.claim(player, "decouverte").status() == PlayerProgress.ClaimStatus.OK, "Ouverture du cristal non comptée");
+            h.assertTrue(ProgressManager.claim(player, "decouverte").status() == PlayerProgress.ClaimStatus.ALREADY, "Récompense donnée deux fois");
+            ProgressManager.markOpened(player, true);
+            h.assertTrue(ProgressManager.claim(player, "catalogue").status() == PlayerProgress.ClaimStatus.OK, "Quête catalogue");
+            ProgressManager.onBuildCompleted(player.getUUID(), DefaultCatalog.shared().get("maison_bois"), null);
+            h.assertTrue(ProgressManager.claim(player, "premiere_maison").status() == PlayerProgress.ClaimStatus.OK, "Quête première maison");
+            h.assertTrue(ProgressManager.claim(player, "pierre").status() == PlayerProgress.ClaimStatus.NOT_READY, "Minage non vérifié");
+            player.awardStat(Stats.BLOCK_MINED.get(Blocks.STONE), 64);
+            h.assertTrue(ProgressManager.claim(player, "pierre").status() == PlayerProgress.ClaimStatus.OK, "Statistique de minage ignorée");
+            h.assertTrue(ProgressManager.get(player).tier() == Tier.PIERRE, "Niveau pierre non atteint");
+
+            // Matériaux insuffisants : rien n'est retiré.
+            player.getInventory().clearContent();
+            ItemCost first = rule.cost().get(0);
+            Item firstItem = BuiltInRegistries.ITEM.get(ResourceLocation.parse(first.item()));
+            give(player, firstItem, 1);
+            h.assertTrue(ProgressManager.unlock(player, locked.id()).status() == PlayerProgress.UnlockStatus.MISSING_MATERIALS, "Matériaux non vérifiés");
+            h.assertTrue(player.getInventory().countItem(firstItem) == 1, "Objets retirés malgré un refus");
+
+            // Coût exact + 10 : seul le coût est retiré, une seule fois.
+            player.getInventory().clearContent();
+            for (ItemCost c : rule.cost()) {
+                give(player, BuiltInRegistries.ITEM.get(ResourceLocation.parse(c.item())), c.count() + 10);
+            }
+            var ok = ProgressManager.unlock(player, locked.id());
+            h.assertTrue(ok.status() == PlayerProgress.UnlockStatus.OK, "Déblocage refusé : " + ok.message());
+            h.assertTrue(ProgressManager.unlock(player, locked.id()).status() == PlayerProgress.UnlockStatus.ALREADY, "Double déblocage");
+            for (ItemCost c : rule.cost()) {
+                int left = player.getInventory().countItem(BuiltInRegistries.ITEM.get(ResourceLocation.parse(c.item())));
+                h.assertTrue(left == 10, c.item() + " : il reste " + left + " au lieu de 10");
+            }
+            h.assertTrue(ProgressManager.canBuild(player, locked), "Construction toujours verrouillée après déblocage");
+
+            // Relecture depuis le fichier du monde.
+            ProgressManager.forget(player.getUUID());
+            PlayerProgress reloaded = ProgressManager.get(player);
+            h.assertTrue(reloaded.tier() == Tier.PIERRE, "Niveau perdu à la relecture");
+            h.assertTrue(reloaded.unlocked().contains(locked.id()), "Déblocage perdu à la relecture");
+            h.assertTrue(reloaded.claimed().contains("pierre"), "Quête perdue à la relecture");
+        } finally {
+            ServerConfig.PROGRESSION_MODE.set(before);
+        }
+        h.succeed();
+    }
+
+    private static void give(ServerPlayer player, Item item, int count) {
+        for (int left = count; left > 0; ) {
+            int n = Math.min(left, item.getDefaultMaxStackSize());
+            player.getInventory().add(new ItemStack(item, n));
+            left -= n;
+        }
     }
 }

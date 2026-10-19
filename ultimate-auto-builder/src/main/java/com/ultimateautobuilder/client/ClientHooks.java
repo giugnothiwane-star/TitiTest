@@ -31,6 +31,47 @@ public final class ClientHooks {
         openMenu();
     }
 
+    /** Clic droit avec le Cristal de Création Visuelle. */
+    public static void onVisualCrystalUsed(InteractionHand hand) {
+        if (ClientConfig.loaded() && !ClientConfig.RIGHT_CLICK_OPENS.get()) {
+            return;
+        }
+        if (hand == InteractionHand.OFF_HAND && ClientConfig.loaded() && ClientConfig.CRYSTAL_HAND.get() == ClientConfig.CrystalHand.MAIN_HAND) {
+            return;
+        }
+        openStudio();
+    }
+
+    /** Vrai si le Cristal de Création Visuelle est tenu dans une main autorisée. */
+    public static boolean holdingVisualCrystal(LocalPlayer player) {
+        if (player == null) {
+            return false;
+        }
+        if (isVisualCrystal(player.getMainHandItem())) {
+            return true;
+        }
+        boolean offhandAllowed = ClientConfig.loaded() && ClientConfig.CRYSTAL_HAND.get() == ClientConfig.CrystalHand.ANY_HAND;
+        return offhandAllowed && isVisualCrystal(player.getOffhandItem());
+    }
+
+    /** L'Ultimate Crystal donne aussi accès au studio (touche V). */
+    private static boolean isVisualCrystal(net.minecraft.world.item.ItemStack s) {
+        return s.is(ModItems.VISUAL_CRYSTAL.get()) || s.is(ModItems.ULTIMATE_CRYSTAL.get());
+    }
+
+    private static boolean isMenuCrystal(net.minecraft.world.item.ItemStack s) {
+        return s.is(ModItems.ICE_CRYSTAL.get()) || s.is(ModItems.ULTIMATE_CRYSTAL.get());
+    }
+
+    public static void openStudio() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.screen != null) {
+            return;
+        }
+        PlacementController.stop();
+        mc.setScreen(new com.ultimateautobuilder.client.visual.VisualStudioScreen(null));
+    }
+
     public static boolean crystalParticlesEnabled() {
         return !ClientConfig.loaded() || ClientConfig.CRYSTAL_PARTICLES.get();
     }
@@ -40,11 +81,11 @@ public final class ClientHooks {
         if (player == null) {
             return false;
         }
-        if (player.getMainHandItem().is(ModItems.ICE_CRYSTAL.get())) {
+        if (isMenuCrystal(player.getMainHandItem())) {
             return true;
         }
         boolean offhandAllowed = ClientConfig.loaded() && ClientConfig.CRYSTAL_HAND.get() == ClientConfig.CrystalHand.ANY_HAND;
-        return offhandAllowed && player.getOffhandItem().is(ModItems.ICE_CRYSTAL.get());
+        return offhandAllowed && isMenuCrystal(player.getOffhandItem());
     }
 
     public static void openMenu() {
@@ -53,8 +94,7 @@ public final class ClientHooks {
             return;
         }
         PlacementController.stop();
-        PacketDistributor.sendToServer(new ActionPayload(ActionPayload.REQUEST_STATE, 0, ""));
-        mc.setScreen(new BuilderScreen());
+        mc.setScreen(com.ultimateautobuilder.client.gui.HubScreen.openedFromCrystal());
     }
 
     public static void openMenuFromServer() {
@@ -72,8 +112,13 @@ public final class ClientHooks {
         ClientState.onProgress(payload);
     }
 
+    public static void onProgress(com.ultimateautobuilder.network.ProgressPayload payload) {
+        ClientProgress.set(payload);
+    }
+
     public static void onCustomPreview(SimplePayloads.CustomPreview payload) {
         ClientState.putCustomPreview(payload.id(), payload.data());
         ThumbnailCache.invalidate(payload.id());
+        com.ultimateautobuilder.client.render.ModelPreviews.invalidate(payload.id());
     }
 }

@@ -1,0 +1,27 @@
+{
+  "parent": "minecraft:item/handheld",
+  "loader": "neoforge:separate_transforms",
+  "base": {
+    "parent": "ultimateautobuilder:item/visual_crystal_3d"
+  },
+  "perspectives": {
+    "gui": {
+      "parent": "minecraft:item/generated",
+      "textures": {
+        "layer0": "ultimateautobuilder:item/visual_crystal"
+      }
+    },
+    "ground": {
+      "parent": "minecraft:item/generated",
+      "textures": {
+        "layer0": "ultimateautobuilder:item/visual_crystal"
+      }
+    },
+    "fixed": {
+      "parent": "minecraft:item/generated",
+      "textures": {
+        "layer0": "ultimateautobuilder:item/visual_crystal"
+      }
+    }
+  }
+}

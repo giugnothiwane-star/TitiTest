@@ -30,7 +30,6 @@ public final class RestoreJob extends Job {
     private int cursor;
     private int restored;
     private int conflicts;
-    private boolean cancelRequested;
     private boolean ticketsAdded;
     private final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 

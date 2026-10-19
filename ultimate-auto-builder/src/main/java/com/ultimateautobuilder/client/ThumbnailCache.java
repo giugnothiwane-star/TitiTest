@@ -71,6 +71,11 @@ public final class ThumbnailCache {
         return null;
     }
 
+    /** Modèle réduit servant aux miniatures, ou null s'il n'est pas encore disponible (aperçu serveur attendu). */
+    public static VoxelModel previewModel(ModelEntry entry) {
+        return modelFor(entry);
+    }
+
     private static VoxelModel modelFor(ModelEntry entry) {
         if (entry.id().startsWith("custom:")) {
             VoxelModel preview = ClientState.customPreview(entry.id());

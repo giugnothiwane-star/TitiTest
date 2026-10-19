@@ -16,12 +16,15 @@ import org.lwjgl.glfw.GLFW;
 public final class ClientTicker {
     /** Réarmé seulement quand la touche est physiquement relâchée : pas de réouverture en boucle. */
     private static boolean armed = true;
+    private static boolean studioArmed = true;
 
     private ClientTicker() {
     }
 
     public static void onClientTick() {
         Minecraft mc = Minecraft.getInstance();
+        com.ultimateautobuilder.client.image.ModelSender.tick();
+        com.ultimateautobuilder.client.dev.CaptureRunner.tick();
         GamepadInput.poll();
         boolean keyClicked = false;
         while (KeyBindings.OPEN_MENU.consumeClick()) {
@@ -29,6 +32,13 @@ public final class ClientTicker {
         }
         if (!physicallyDown(mc, KeyBindings.OPEN_MENU)) {
             armed = true;
+        }
+        boolean studioClicked = false;
+        while (KeyBindings.OPEN_STUDIO.consumeClick()) {
+            studioClicked = true;
+        }
+        if (!physicallyDown(mc, KeyBindings.OPEN_STUDIO)) {
+            studioArmed = true;
         }
         if (mc.player == null) {
             return;
@@ -42,8 +52,19 @@ public final class ClientTicker {
             return;
         }
         boolean padOpen = GamepadInput.pressed(ClientConfig.loaded() ? ClientConfig.GAMEPAD_OPEN.get() : ClientConfig.GamepadButton.RIGHT_BUMPER);
+        boolean require = !ClientConfig.loaded() || ClientConfig.REQUIRE_CRYSTAL.get();
+        // R1 ouvre le menu du cristal tenu : studio pour le Cristal de Création Visuelle.
+        if ((studioClicked && studioArmed) || (padOpen && ClientHooks.holdingVisualCrystal(mc.player))) {
+            if (require && !ClientHooks.holdingVisualCrystal(mc.player)) {
+                mc.player.displayClientMessage(Component.translatable("message.ultimateautobuilder.need_visual_crystal")
+                        .withStyle(ChatFormatting.LIGHT_PURPLE), true);
+            } else {
+                studioArmed = false;
+                ClientHooks.openStudio();
+                return;
+            }
+        }
         if ((keyClicked && armed) || padOpen) {
-            boolean require = !ClientConfig.loaded() || ClientConfig.REQUIRE_CRYSTAL.get();
             if (require && !ClientHooks.holdingCrystal(mc.player)) {
                 if (keyClicked) {
                     mc.player.displayClientMessage(Component.translatable("message.ultimateautobuilder.need_crystal").withStyle(ChatFormatting.AQUA), true);

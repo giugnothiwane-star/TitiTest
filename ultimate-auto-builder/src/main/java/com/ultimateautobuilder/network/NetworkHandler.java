@@ -20,6 +20,14 @@ public final class NetworkHandler {
                 (payload, ctx) -> ctx.enqueueWork(() -> ServerPayloadHandler.onBuildRequest(payload, ctx.player())));
         r.playToServer(ActionPayload.TYPE, ActionPayload.CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> ServerPayloadHandler.onAction(payload, ctx.player())));
+        r.playToServer(ModelUploadPayload.TYPE, ModelUploadPayload.CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> {
+                    if (ctx.player() instanceof net.minecraft.server.level.ServerPlayer sp) {
+                        ModelUploads.onChunk(payload, sp);
+                    }
+                }));
+        r.playToClient(ProgressPayload.TYPE, ProgressPayload.CODEC,
+                (payload, ctx) -> ctx.enqueueWork(() -> ClientHooks.onProgress(payload)));
         r.playToClient(StatePayload.TYPE, StatePayload.CODEC,
                 (payload, ctx) -> ctx.enqueueWork(() -> ClientHooks.onState(payload)));
         r.playToClient(JobProgressPayload.TYPE, JobProgressPayload.CODEC,

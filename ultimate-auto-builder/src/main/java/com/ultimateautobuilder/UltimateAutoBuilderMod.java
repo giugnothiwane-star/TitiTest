@@ -43,11 +43,18 @@ public final class UltimateAutoBuilderMod {
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> UabCommand.register(e.getDispatcher()));
         NeoForge.EVENT_BUS.addListener((PermissionGatherEvent.Nodes e) -> Permissions.registerNodes(e));
         NeoForge.EVENT_BUS.addListener((ServerStartedEvent e) -> BuildManager.onServerStarted(e.getServer()));
-        NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> BuildManager.onServerStopping(e.getServer()));
+        NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
+            BuildManager.onServerStopping(e.getServer());
+            com.ultimateautobuilder.progression.ProgressManager.clear();
+        });
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Pre e) -> BuildManager.onServerTickPre(e.getServer()));
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post e) -> BuildManager.onServerTickPost(e.getServer()));
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent e) -> PlayerJoinHandler.onLogin(e.getEntity()));
-        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent e) -> PlayerJoinHandler.onLogout(e.getEntity()));
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent e) -> {
+            PlayerJoinHandler.onLogout(e.getEntity());
+            com.ultimateautobuilder.network.ModelUploads.forget(e.getEntity().getUUID());
+            com.ultimateautobuilder.progression.ProgressManager.forget(e.getEntity().getUUID());
+        });
 
         // Le catalogue est purement calculatoire : son initialisation précoce évite un à-coup à la première ouverture.
         int count = DefaultCatalog.shared().size();

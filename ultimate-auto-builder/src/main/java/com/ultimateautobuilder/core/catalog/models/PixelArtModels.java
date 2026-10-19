@@ -158,20 +158,6 @@ public final class PixelArtModels {
                 "....CCDD....",
                 ".....DD....."}, "pixel art", "diamant", "gemme", "minecraft");
         r.gen("pixel_arc_en_ciel", "Arc-en-ciel", 2, SizeSpec.height(8, 16, 32, 64), p -> rainbow(p.size()), "pixel art", "arc en ciel", "couleurs");
-        art(r, "pixel_pikachu", "Pikachu en pixel art", S, new String[]{
-                "K............K",
-                "YK..........KY",
-                "YYK........KYY",
-                ".YYKYYYYYYKYY.",
-                "..YYYYYYYYYY..",
-                ".YYYYYYYYYYYY.",
-                ".YYKWYYYYKWYY.",
-                ".YYKKYYYYKKYY.",
-                ".RRYYYKKYYYRR.",
-                ".RRYYYYYYYYRR.",
-                "..YYYKYYKYYY..",
-                "...YYYKKYYY...",
-                "....YYYYYY...."}, "pixel art", "pikachu", "pokemon");
         r.sculpt("helice_adn", "Double hélice d'ADN", 3, SizeSpec.height(12, 30, 60, 120), PixelArtModels::dna, "sculpture", "adn", "science");
         r.sculpt("noeud_torique", "Nœud torique", 4, SizeSpec.height(10, 24, 48, 96), PixelArtModels::torusKnot, "sculpture", "noeud", "mathematiques");
         r.sculpt("spirale_abstraite", "Spirale abstraite", 3, SizeSpec.height(10, 24, 48, 96), PixelArtModels::spiral, "sculpture", "spirale", "art moderne");
