@@ -92,6 +92,8 @@ jobs:
           LEVEL=$(find run -name level.dat -not -path '*/saves/*' | head -n 1)
           echo "Monde de test : $LEVEL"
           mkdir -p run/saves && rm -rf run/saves/uab_capture run/screenshots
+          # Premier lancement sans écran d'accessibilité ni didacticiel (sinon l'accès rapide au monde est bloqué).
+          printf 'onboardAccessibility:false\nnarrator:0\ntutorialStep:none\nskipMultiplayerWarning:true\njoinedFirstServer:true\n' > run/options.txt
           if [ -n "$LEVEL" ]; then cp -r "$(dirname "$LEVEL")" run/saves/uab_capture; rm -f run/saves/uab_capture/session.lock; fi
           timeout 1080 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runCaptureClient -Pneo_version=${{ steps.neo.outputs.version }} --console=plain || echo "Client terminé avec le code $?"
           ls -la run/screenshots || true

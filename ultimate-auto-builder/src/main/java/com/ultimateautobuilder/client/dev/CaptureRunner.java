@@ -93,6 +93,13 @@ public final class CaptureRunner {
             }
             return;
         }
+        if (mc.screen instanceof net.minecraft.client.gui.screens.AccessibilityOnboardingScreen) {
+            // Écran du tout premier lancement : on le passe, comme le ferait le joueur.
+            mc.options.onboardAccessibility = false;
+            mc.options.save();
+            mc.setScreen(new net.minecraft.client.gui.screens.TitleScreen());
+            return;
+        }
         boolean idle = mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen
                 || mc.screen instanceof net.minecraft.client.gui.screens.DisconnectedScreen
                 || mc.screen instanceof net.minecraft.client.gui.screens.AlertScreen
