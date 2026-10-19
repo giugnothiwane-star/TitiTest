@@ -276,6 +276,55 @@ public final class UabGameTests {
         h.succeed();
     }
 
+    /** Tous les blocs proposés par Image-to-Build existent dans cette version du jeu. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 20, batch = "uab_image_palette")
+    public static void imagePaletteResolves(GameTestHelper h) {
+        List<String> unknown = new ArrayList<>();
+        var all = com.ultimateautobuilder.core.image.BlockPalette.of(java.util.EnumSet.allOf(com.ultimateautobuilder.core.image.BlockPalette.Family.class));
+        for (var e : all.entries()) {
+            if (BlockResolver.resolve(e.state()).fallback()) {
+                unknown.add(e.state());
+            }
+        }
+        h.assertTrue(unknown.isEmpty(), "Blocs inconnus : " + unknown);
+        h.succeed();
+    }
+
+    /** Chaîne complète : image de synthèse → analyse → reconstruction → format réseau → construction par le moteur. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 2400, batch = "uab_image_build")
+    public static void imageModelBuilds(GameTestHelper h) {
+        int w = 60, hh = 50;
+        int[] px = new int[w * hh];
+        for (int y = 0; y < hh; y++) {
+            for (int x = 0; x < w; x++) {
+                boolean wall = y >= 25 && y < 48 && x >= 10 && x < 50;
+                boolean roof = y >= 8 && y < 25 && Math.abs(x - 30) <= (y - 8) * 22 / 17;
+                px[y * w + x] = wall ? 0xFF8A8A8A : roof ? 0xFFB0302A : 0xFFFFFFFF;
+            }
+        }
+        var a = com.ultimateautobuilder.core.image.ImageAnalysis.analyze(new com.ultimateautobuilder.core.image.ImageData(w, hh, px));
+        var o = new com.ultimateautobuilder.core.image.Reconstructor.Options(com.ultimateautobuilder.core.image.Reconstructor.Mode.BUILDING, null,
+                null, null, 0, 14, 8, null, true, a.best().subject(), false, false);
+        var r = com.ultimateautobuilder.core.image.Reconstructor.reconstruct(com.ultimateautobuilder.core.image.Reconstructor.Views.single(a), o);
+        VoxelModel model;
+        try {
+            byte[] data = com.ultimateautobuilder.core.importer.ModelCodec.encode("Maison image", r.model().toVoxelModel());
+            model = com.ultimateautobuilder.core.importer.ModelCodec.decode(data, com.ultimateautobuilder.config.ServerConfig.limits()).model();
+        } catch (Exception e) {
+            h.fail("Encodage du modèle impossible : " + e.getMessage());
+            return;
+        }
+        h.assertTrue(model.size() == r.model().count(), "Blocs perdus à l'encodage : " + model.size() + " / " + r.model().count());
+        var entry = com.ultimateautobuilder.storage.CustomModelStore.register("gametest_image", "Maison image", model);
+        PlaceJob job = submit(h, request(h, entry.id(), SizePreset.NORMAL, 0, 0, BuildMode.NORMAL));
+        h.succeedWhen(() -> {
+            h.assertTrue(job.state() != Job.State.FAILED, "Échec : " + job.message());
+            h.assertTrue(job.state() == Job.State.DONE, "Construction en cours : " + job.state());
+            int placed = countNonAir(h.getLevel(), job.bounds());
+            h.assertTrue(placed >= model.size() * 9 / 10, "Blocs posés : " + placed + " / " + model.size());
+        });
+    }
+
     /** L'objet Cristal de Glace est enregistré sous un identifiant stable. */
     @GameTest(template = TEMPLATE, timeoutTicks = 20, batch = "uab_item")
     public static void crystalRegistered(GameTestHelper h) {

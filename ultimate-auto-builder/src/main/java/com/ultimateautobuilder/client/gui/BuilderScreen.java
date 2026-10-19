@@ -303,7 +303,7 @@ public final class BuilderScreen extends Screen {
     }
 
     private void initBottomBar(int y) {
-        int n = 4;
+        int n = 5;
         int bw = Math.min(110, (width - 16 - (n - 1) * 4) / n);
         int x = (width - (n * bw + (n - 1) * 4)) / 2;
         addRenderableWidget(Button.builder(Component.literal(page == Page.HISTORY ? "Catalogue" : "Historique"),
@@ -312,7 +312,9 @@ public final class BuilderScreen extends Screen {
                 b -> setPage(page == Page.CUSTOM ? Page.CATALOG : Page.CUSTOM)).bounds(x + bw + 4, y, bw, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Paramètres"), b -> minecraft.setScreen(new SettingsScreen(this)))
                 .bounds(x + 2 * (bw + 4), y, bw, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Fermer"), b -> onClose()).bounds(x + 3 * (bw + 4), y, bw, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Image → Construction"),
+                b -> minecraft.setScreen(new com.ultimateautobuilder.client.image.ImageBuildScreen(this))).bounds(x + 3 * (bw + 4), y, bw, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Fermer"), b -> onClose()).bounds(x + 4 * (bw + 4), y, bw, 20).build());
     }
 
     private void setPage(Page p) {

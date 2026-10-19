@@ -23,6 +23,7 @@ public final class ClientTicker {
 
     public static void onClientTick() {
         Minecraft mc = Minecraft.getInstance();
+        com.ultimateautobuilder.client.image.ModelSender.tick();
         GamepadInput.poll();
         boolean keyClicked = false;
         while (KeyBindings.OPEN_MENU.consumeClick()) {

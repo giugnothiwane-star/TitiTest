@@ -47,7 +47,10 @@ public final class UltimateAutoBuilderMod {
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Pre e) -> BuildManager.onServerTickPre(e.getServer()));
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post e) -> BuildManager.onServerTickPost(e.getServer()));
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent e) -> PlayerJoinHandler.onLogin(e.getEntity()));
-        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent e) -> PlayerJoinHandler.onLogout(e.getEntity()));
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent e) -> {
+            PlayerJoinHandler.onLogout(e.getEntity());
+            com.ultimateautobuilder.network.ModelUploads.forget(e.getEntity().getUUID());
+        });
 
         // Le catalogue est purement calculatoire : son initialisation précoce évite un à-coup à la première ouverture.
         int count = DefaultCatalog.shared().size();
