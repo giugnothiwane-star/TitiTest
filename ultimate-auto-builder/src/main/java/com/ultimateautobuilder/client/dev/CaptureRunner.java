@@ -27,6 +27,7 @@ public final class CaptureRunner {
     private static int step;
     private static int wait;
     private static ImageBuildScreen imageScreen;
+    private static boolean builtShot;
 
     private CaptureRunner() {
     }
@@ -118,6 +119,13 @@ public final class CaptureRunner {
     }
 
     private static void run(Minecraft mc) {
+        // Étapes 109-110 insérées après 9 : on y saute puis on revient à 10.
+        if (step == 10 && !builtShot) {
+            builtShot = true;
+            step = 109;
+        } else if (step == 111) {
+            step = 10;
+        }
         switch (step++) {
             case 0 -> wait = 200; // chargement des chunks autour du joueur
             case 1 -> {
@@ -160,9 +168,20 @@ public final class CaptureRunner {
             }
             case 8 -> {
                 shot(mc, "04_fantome_monde");
-                wait = 10;
+                // Construction réelle par le serveur intégré, pour juger le rendu final dans le monde.
+                PlacementController.requestBuild(mc, null);
+                wait = 300;
             }
             case 9 -> {
+                mc.setScreen(null);
+                mc.player.setXRot(10f);
+                wait = 40;
+            }
+            case 109 -> {
+                shot(mc, "04b_construction_monde");
+                wait = 10;
+            }
+            case 110 -> {
                 PlacementController.stop();
                 Path img = ImageFiles.images().resolve("capture_maison.png");
                 ImageFiles.ensureDirs();
