@@ -332,7 +332,7 @@ public final class BuilderScreen extends ScaledScreen {
                 b -> setPage(page == Page.CUSTOM ? Page.CATALOG : Page.CUSTOM)).bounds(x + bw + 4, y, bw, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Paramètres"), b -> minecraft.setScreen(new SettingsScreen(this)))
                 .bounds(x + 2 * (bw + 4), y, bw, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Image → Construction"),
+        addRenderableWidget(Button.builder(Component.literal("Depuis une image"),
                 b -> minecraft.setScreen(new com.ultimateautobuilder.client.image.ImageBuildScreen(this))).bounds(x + 3 * (bw + 4), y, bw, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Fermer"), b -> onClose()).bounds(x + 4 * (bw + 4), y, bw, 20).build());
     }
@@ -385,7 +385,8 @@ public final class BuilderScreen extends ScaledScreen {
         controls.add(addRenderableWidget(Button.builder(Component.literal(sizeLabel(e)), b -> {
             cycleSize(1);
             rebuildWidgets();
-        }).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal("Petit, Normal, Grand, Géant ou taille personnalisée"))).build()));
+        }).bounds(x, y, w, 20).tooltip(Tooltip.create(Component.literal("Petit, Normal, Grand, Géant ou taille personnalisée — mesure : "
+                + e.sizes().kind().label()))).build()));
         y += ROW_H;
         if (s.preset == SizePreset.CUSTOM) {
             EditBox custom = new EditBox(font, x + 1, y + 1, w - 2, 18, Component.literal("Taille personnalisée"));
@@ -715,7 +716,8 @@ public final class BuilderScreen extends ScaledScreen {
 
     private static String sizeLabel(ModelEntry e) {
         PlacementController.Settings s = PlacementController.SETTINGS;
-        return "Taille : " + s.preset.displayName() + " (" + e.sizes().resolve(s.preset, s.customSize) + " blocs, " + e.sizes().kind().label() + ")";
+        // Libellé court (le bouton est étroit) ; la nature de la mesure est dans l'infobulle.
+        return "Taille : " + s.preset.displayName() + " · " + e.sizes().resolve(s.preset, s.customSize) + " blocs";
     }
 
     private static String modeHelp(BuildMode m) {
@@ -1304,7 +1306,7 @@ public final class BuilderScreen extends ScaledScreen {
     /** Ordonnée de la ligne « distance » (entre les boutons − et +), ou -1. */
     private int rowOfDistance() {
         for (AbstractWidget w : controls) {
-            if (w instanceof Button b && "−".equals(b.getMessage().getString())) {
+            if (w instanceof Button b && b.visible && "−".equals(b.getMessage().getString())) {
                 return b.getY();
             }
         }

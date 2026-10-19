@@ -144,8 +144,19 @@ public final class PlacementController {
                 Direction dir = mc.player.getDirection();
                 int half = model == null ? 4 : Math.max(model.sizeX(), model.sizeZ()) / 2;
                 BlockPos p = mc.player.blockPosition().relative(dir, SETTINGS.distance + half);
-                int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()) - 1;
-                return new BlockPos(p.getX(), y, p.getZ());
+                // Le client ne reçoit que les cartes de hauteur WORLD_SURFACE et MOTION_BLOCKING : on part de
+                // MOTION_BLOCKING puis on descend sous le feuillage pour poser la construction au sol.
+                int y = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, p.getX(), p.getZ()) - 1;
+                BlockPos.MutableBlockPos q = new BlockPos.MutableBlockPos(p.getX(), y, p.getZ());
+                int floor = mc.level.getMinBuildHeight();
+                while (q.getY() > floor && mc.level.getBlockState(q).is(net.minecraft.tags.BlockTags.LEAVES)) {
+                    q.move(Direction.DOWN);
+                }
+                if (q.getY() <= floor) {
+                    // Colonne non chargée : hauteur des pieds du joueur.
+                    return new BlockPos(p.getX(), mc.player.blockPosition().getY() - 1, p.getZ());
+                }
+                return q.immutable();
             }
         }
     }

@@ -32,6 +32,33 @@ public abstract class ScaledScreen extends Screen {
         width = (int) Math.ceil(realW * uiScale);
         height = (int) Math.ceil(realH * uiScale);
         initScaled();
+        fitButtonLabels();
+    }
+
+    /**
+     * Raccourcit les libellés trop longs : le texte défilant des boutons vanilla est découpé avec des
+     * coordonnées non transformées, il serait invisible à une autre échelle. Le texte complet reste
+     * disponible en infobulle.
+     */
+    private void fitButtonLabels() {
+        for (var child : children()) {
+            if (child instanceof net.minecraft.client.gui.components.AbstractButton b) {
+                String text = b.getMessage().getString();
+                int avail = b.getWidth() - 8;
+                if (font.width(text) > avail && avail > 12) {
+                    String cut = font.plainSubstrByWidth(text, avail - font.width("…")) + "…";
+                    if (b.getTooltip() == null) {
+                        b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(text)));
+                    }
+                    b.setMessage(Component.literal(cut));
+                }
+            }
+        }
+    }
+
+    /** À appeler après l'ajout dynamique de boutons hors de {@link #initScaled()}. */
+    protected void refitLabels() {
+        fitButtonLabels();
     }
 
     /** Équivalent de {@link #init()} dans l'espace virtuel. */
