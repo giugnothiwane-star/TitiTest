@@ -16,7 +16,7 @@ import java.util.List;
 
 /**
  * Outil de contrôle visuel : rend chaque modèle en PNG isométrique (activé uniquement avec
- * -PpreviewDir=… ; filtre optionnel -PpreviewFilter=goku,pikachu).
+ * -PpreviewDir=… ; filtre optionnel -PpreviewFilter=samourai,chevalier).
  */
 class PreviewRenderTest {
     @Test

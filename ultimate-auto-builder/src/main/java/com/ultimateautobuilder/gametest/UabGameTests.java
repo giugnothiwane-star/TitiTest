@@ -136,26 +136,18 @@ public final class UabGameTests {
         });
     }
 
-    /** Personnage sculpté (Pikachu) en petite taille, avec rotation. */
-    @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_pikachu")
-    public static void buildPikachu(GameTestHelper h) {
-        PlaceJob job = submit(h, request(h, "pikachu", SizePreset.SMALL, 0, 1, BuildMode.NORMAL));
+    /** Statue sculptée (samouraï) en petite taille avec rotation ; Pikachu n'existe plus dans le catalogue. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 1200, batch = "uab_statue")
+    public static void buildRotatedStatue(GameTestHelper h) {
+        h.assertTrue(DefaultCatalog.shared().get("pikachu") == null, "Pikachu est encore présent dans le catalogue");
+        PlaceJob job = submit(h, request(h, "samourai", SizePreset.SMALL, 0, 1, BuildMode.NORMAL));
         h.succeedWhen(() -> {
             h.assertTrue(job.state() != Job.State.FAILED, "Échec : " + job.message());
             h.assertTrue(job.state() == Job.State.DONE, "Construction en cours : " + job.state());
             int[] b = job.bounds();
             h.assertTrue(b[4] - b[1] + 1 >= 6, "Hauteur inattendue : " + (b[4] - b[1] + 1));
-            boolean yellow = false;
-            BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-            for (int x = b[0]; x <= b[3] && !yellow; x++) {
-                for (int y = b[1]; y <= b[4] && !yellow; y++) {
-                    for (int z = b[2]; z <= b[5] && !yellow; z++) {
-                        BlockState s = h.getLevel().getBlockState(p.set(x, y, z));
-                        yellow = s.is(Blocks.YELLOW_CONCRETE) || s.is(Blocks.YELLOW_WOOL) || s.is(Blocks.YELLOW_TERRACOTTA) || s.is(Blocks.GOLD_BLOCK);
-                    }
-                }
-            }
-            h.assertTrue(yellow, "Aucun bloc jaune : le modèle Pikachu n'a pas été posé correctement");
+            int placed = countNonAir(h.getLevel(), b);
+            h.assertTrue(placed >= job.total() * 9 / 10, "Blocs posés : " + placed + " / " + job.total());
         });
     }
 

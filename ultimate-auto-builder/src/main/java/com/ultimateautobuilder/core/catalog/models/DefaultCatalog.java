@@ -2,7 +2,7 @@ package com.ultimateautobuilder.core.catalog.models;
 
 import com.ultimateautobuilder.core.catalog.Catalog;
 
-/** Assemble le catalogue intégré complet (≈ 400 modèles répartis en 16 catégories). */
+/** Assemble le catalogue intégré complet (maisons, architecture, nature, créatures et mobs). */
 public final class DefaultCatalog {
     private static volatile Catalog shared;
 
@@ -12,8 +12,6 @@ public final class DefaultCatalog {
     /** Nouveau catalogue indépendant (tests, outils). */
     public static Catalog create() {
         Catalog c = new Catalog();
-        PokemonModels.register(c);
-        AnimeModels.register(c);
         HouseModels.register(c);
         CastleModels.register(c);
         CityModels.register(c);

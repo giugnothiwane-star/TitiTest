@@ -39,7 +39,7 @@ class ImportTest {
 
     @Test
     void codecRejectsMalformedFiles() throws Exception {
-        VoxelModel m = DefaultCatalog.create().get("pikachu").generate(SizePreset.SMALL, 0, false);
+        VoxelModel m = DefaultCatalog.create().get("chevalier").generate(SizePreset.SMALL, 0, false);
         byte[] good = ModelCodec.encode("x", m);
         assertThrows(ImportException.class, () -> ModelCodec.decode(Arrays.copyOf(good, good.length / 2), Limits.DEFAULT), "tronqué");
         assertThrows(ImportException.class, () -> ModelCodec.decode(new byte[]{1, 2, 3, 4, 5}, Limits.DEFAULT), "pas du gzip");
