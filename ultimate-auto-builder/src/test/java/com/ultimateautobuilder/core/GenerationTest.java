@@ -122,4 +122,15 @@ class GenerationTest {
         assertEquals(64 * 64, img.argb().length);
         assertTrue(Arrays.stream(img.argb()).anyMatch(c -> c != 0));
     }
+
+    @Test
+    void everyPaletteBlockExceptAirHasAVisibleColor() {
+        // Régression : « stairs » contient « air », les toits disparaissaient des miniatures.
+        for (String state : new String[]{"minecraft:oak_stairs[facing=north,half=bottom]", "minecraft:cherry_stairs", "minecraft:quartz_stairs",
+                "minecraft:stone_brick_stairs", "minecraft:hay_block"}) {
+            assertTrue(com.ultimateautobuilder.core.render.ColorTable.rgb(state) >= 0, state);
+        }
+        assertEquals(-1, com.ultimateautobuilder.core.render.ColorTable.rgb("minecraft:air"));
+        assertEquals(-1, com.ultimateautobuilder.core.render.ColorTable.rgb("minecraft:cave_air"));
+    }
 }

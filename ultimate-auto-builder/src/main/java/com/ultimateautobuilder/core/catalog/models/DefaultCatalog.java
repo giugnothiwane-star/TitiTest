@@ -29,6 +29,7 @@ public final class DefaultCatalog {
         HumorModels.register(c);
         MiscModels.register(c);
         MobModels.register(c);
+        InspiredModels.register(c);
         return c;
     }
 

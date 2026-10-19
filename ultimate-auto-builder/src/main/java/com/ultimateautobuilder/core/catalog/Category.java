@@ -19,6 +19,7 @@ public enum Category {
     HUMOR("humor", "Structures humoristiques", 10),
     MISC("misc", "Structures diverses", 15),
     MOBS("mobs", "Mobs Minecraft", 88),
+    INSPIRED("inspirations", "Inspirations (vos images)", 19),
     CUSTOM("custom", "Structures personnalisées", 0);
 
     private final String key;

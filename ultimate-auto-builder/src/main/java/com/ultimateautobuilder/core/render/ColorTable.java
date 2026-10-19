@@ -34,7 +34,7 @@ public final class ColorTable {
         DYES.put("red", 0xA12722);
         DYES.put("black", 0x141519);
 
-        KEYWORDS.put("air", -1);
+        // Pas de mot-clé « air » : il correspondrait à « stairs » (l'air est traité par égalité stricte).
         KEYWORDS.put("water", 0x3F76E4);
         KEYWORDS.put("lava", 0xD96415);
         KEYWORDS.put("cherry_leaves", 0xE7A8C9);

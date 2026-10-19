@@ -56,7 +56,7 @@ public final class BuilderScreen extends Screen {
     }
 
     private static final int SPECIAL_NONE = 0, SPECIAL_ALL = 1, SPECIAL_FAVORITES = 2, SPECIAL_RECENTS = 3;
-    private static final int CARD_W = 62, CARD_H = 74, GAP = 4, ROW_H = 22;
+    private static final int CARD_W = 70, CARD_H = 80, GAP = 4, ROW_H = 22;
     private static final String[] SIZE_FILTERS = {"Toutes tailles", "Petites", "Moyennes", "Grandes"};
     private static final String[] ROTATIONS = {"0°", "90°", "180°", "270°"};
 
@@ -374,7 +374,7 @@ public final class BuilderScreen extends Screen {
                     ClientModels.request(e, s.size(), s.hollow);
                 }
             });
-            custom.setTooltip(Tooltip.create(Component.literal("Entre " + e.sizes().min() + " et " + e.sizes().max() + " blocs de " + e.sizes().kind().label())));
+            custom.setTooltip(Tooltip.create(Component.literal("Entre " + e.sizes().min() + " et " + e.sizes().max() + " blocs (" + e.sizes().kind().label() + ")")));
             controls.add(addRenderableWidget(custom));
             y += ROW_H;
         }
@@ -644,7 +644,7 @@ public final class BuilderScreen extends Screen {
 
     private static String sizeLabel(ModelEntry e) {
         PlacementController.Settings s = PlacementController.SETTINGS;
-        return "Taille : " + s.preset.displayName() + " (" + e.sizes().resolve(s.preset, s.customSize) + " de " + e.sizes().kind().label() + ")";
+        return "Taille : " + s.preset.displayName() + " (" + e.sizes().resolve(s.preset, s.customSize) + " blocs, " + e.sizes().kind().label() + ")";
     }
 
     private static String modeHelp(BuildMode m) {
@@ -1061,12 +1061,16 @@ public final class BuilderScreen extends Screen {
             return;
         }
         RenderSystem.enableBlend();
+        ModelEntry hovered = null;
         for (int i = 0; i < per && start + i < results.size(); i++) {
             ModelEntry e = results.get(start + i);
             int x = gridX + (i % cols) * (CARD_W + GAP);
             int y = gridY + (i / cols) * (CARD_H + GAP);
             boolean sel = e.id().equals(selectedId);
             boolean hover = mx >= x && mx < x + CARD_W && my >= y && my < y + CARD_H;
+            if (hover) {
+                hovered = e;
+            }
             g.fill(x, y, x + CARD_W, y + CARD_H, sel ? 0xE0204A66 : hover ? 0xD0303040 : 0xC0181820);
             g.renderOutline(x, y, CARD_W, CARD_H, sel ? (zone == Zone.GRID ? 0xFF7FE0FF : 0xFF4FA0C0) : 0xFF333344);
             ResourceLocation tex = ThumbnailCache.get(e, 0);
@@ -1080,9 +1084,23 @@ public final class BuilderScreen extends Screen {
             if (ClientData.isFavorite(e.id())) {
                 g.drawString(font, "★", x + CARD_W - 9, y + 2, 0xFFFFD040, true);
             }
-            String name = font.plainSubstrByWidth(e.name(), CARD_W - 4);
-            g.drawCenteredString(font, name, x + CARD_W / 2, y + CARD_H - 17, 0xFFFFFFFF);
-            g.drawCenteredString(font, "★".repeat(e.complexity()), x + CARD_W / 2, y + CARD_H - 8, 0xFF8899AA);
+            // Nom sur deux lignes au plus ; le nom complet s'affiche au survol.
+            java.util.List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(e.name()), CARD_W - 4);
+            for (int l = 0; l < Math.min(2, lines.size()); l++) {
+                net.minecraft.util.FormattedCharSequence line = lines.get(l);
+                if (l == 1 && lines.size() > 2) {
+                    String rest = font.plainSubstrByWidth(e.name().substring(Math.min(e.name().length(), firstLineLength(e.name()))), CARD_W - 12);
+                    line = Component.literal(rest.strip() + "…").getVisualOrderText();
+                }
+                g.drawCenteredString(font, line, x + CARD_W / 2, y + CARD_H - 21 + l * 10, 0xFFFFFFFF);
+            }
+        }
+        if (hovered != null) {
+            java.util.List<Component> tip = new java.util.ArrayList<>();
+            tip.add(Component.literal(hovered.name()).withStyle(net.minecraft.ChatFormatting.WHITE));
+            tip.add(Component.literal(hovered.category().displayName() + " · complexité " + "★".repeat(hovered.complexity()))
+                    .withStyle(net.minecraft.ChatFormatting.GRAY));
+            g.renderComponentTooltip(font, tip, mx, my);
         }
         int maxPage = Math.max(0, (results.size() - 1) / per);
         String info = results.size() + " modèle" + (results.size() > 1 ? "s" : "") + " — page " + (pageIndex + 1) + "/" + (maxPage + 1);
@@ -1090,6 +1108,13 @@ public final class BuilderScreen extends Screen {
         if (!compact && selected() == null) {
             g.drawCenteredString(font, "Sélectionnez un modèle", panelX + panelW / 2, panelY + 40, 0xFF888888);
         }
+    }
+
+    /** Longueur (en caractères) de la première ligne affichée dans une carte. */
+    private int firstLineLength(String name) {
+        java.util.List<net.minecraft.network.chat.FormattedText> parts = font.getSplitter().splitLines(name, CARD_W - 4,
+                net.minecraft.network.chat.Style.EMPTY);
+        return parts.isEmpty() ? name.length() : parts.get(0).getString().length();
     }
 
     private void renderDetail(GuiGraphics g) {
