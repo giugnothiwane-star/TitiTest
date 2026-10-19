@@ -49,9 +49,7 @@ public class VisualCrystalItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        if (getClass() != UltimateCrystalItem.class) {
-            tooltip.add(Component.translatable("item.ultimateautobuilder.legacy_crystal.tooltip").withStyle(ChatFormatting.GOLD));
-        }
+        tooltip.add(Component.translatable("item.ultimateautobuilder.legacy_crystal.tooltip").withStyle(ChatFormatting.GOLD));
         tooltip.add(Component.translatable("item.ultimateautobuilder.visual_crystal.tooltip1").withStyle(ChatFormatting.LIGHT_PURPLE));
         tooltip.add(Component.translatable("item.ultimateautobuilder.visual_crystal.tooltip2").withStyle(ChatFormatting.GRAY));
     }

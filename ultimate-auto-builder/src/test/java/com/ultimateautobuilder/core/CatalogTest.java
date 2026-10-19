@@ -68,16 +68,16 @@ class CatalogTest {
 
     @Test
     void searchByCategoryAndSort() {
-        List<ModelEntry> pokemons = catalog.search("", Category.HOUSES, null, Catalog.Sort.NAME);
-        assertEquals(catalog.count(Category.HOUSES), pokemons.size());
-        for (int i = 1; i < pokemons.size(); i++) {
-            assertTrue(Catalog.comparator(Catalog.Sort.NAME).compare(pokemons.get(i - 1), pokemons.get(i)) <= 0);
+        List<ModelEntry> houses = catalog.search("", Category.HOUSES, null, Catalog.Sort.NAME);
+        assertEquals(catalog.count(Category.HOUSES), houses.size());
+        for (int i = 1; i < houses.size(); i++) {
+            assertTrue(Catalog.comparator(Catalog.Sort.NAME).compare(houses.get(i - 1), houses.get(i)) <= 0);
         }
         List<ModelEntry> bySize = catalog.search("", null, null, Catalog.Sort.SIZE);
         for (int i = 1; i < bySize.size(); i++) {
             assertTrue(bySize.get(i - 1).sizes().normal() <= bySize.get(i).sizes().normal());
         }
-        List<ModelEntry> favorites = catalog.search("", null, Catalog.idIn(List.of("samourai", "chevalier", "pikachu")), Catalog.Sort.NAME);
+        List<ModelEntry> favorites = catalog.search("", null, Catalog.idIn(List.of("samourai", "chevalier", "modele_inexistant")), Catalog.Sort.NAME);
         assertEquals(2, favorites.size());
     }
 
