@@ -222,6 +222,7 @@ public final class CaptureRunner {
             }
             case 15 -> {
                 shot(mc, "09_studio");
+                survival(mc);
                 mc.setScreen(HubScreen.openedFromCrystal());
                 wait = 150;
             }
@@ -291,6 +292,26 @@ public final class CaptureRunner {
             h.captureSection(section);
         }
         wait = 60;
+    }
+
+    /**
+     * Passe le joueur en survie sur le serveur intégré : la progression (verrous, coûts) s'applique
+     * alors et devient visible sur les captures. Outil de vérification uniquement.
+     */
+    private static void survival(Minecraft mc) {
+        var server = mc.getSingleplayerServer();
+        if (server == null) {
+            UltimateAutoBuilderMod.LOGGER.warn("Capture : pas de serveur intégré, mode de jeu inchangé");
+            return;
+        }
+        java.util.UUID id = mc.player.getUUID();
+        server.execute(() -> {
+            var sp = server.getPlayerList().getPlayer(id);
+            if (sp != null) {
+                sp.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                UltimateAutoBuilderMod.LOGGER.info("Capture : joueur en survie (progression appliquée)");
+            }
+        });
     }
 
     /** Met l'Ultimate Crystal (donné à la première connexion) dans la main du joueur. */
