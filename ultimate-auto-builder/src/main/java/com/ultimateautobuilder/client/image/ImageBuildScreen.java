@@ -775,8 +775,8 @@ public final class ImageBuildScreen extends com.ultimateautobuilder.client.gui.S
     }
 
     @Override
-    public void render(GuiGraphics g, int mx, int my, float pt) {
-        super.render(g, mx, my, pt);
+    protected void renderScaled(GuiGraphics g, int mx, int my, float pt) {
+        super.renderScaled(g, mx, my, pt);
         g.drawString(font, "§b❄ §fImage → Construction §7— calcul local, rien n'est envoyé hors du jeu", 8, 5,
                 0xFFFFFFFF);
         String st = status + (ModelSender.busy() ? " §7(envoi " + ModelSender.progress() + ")" : "");

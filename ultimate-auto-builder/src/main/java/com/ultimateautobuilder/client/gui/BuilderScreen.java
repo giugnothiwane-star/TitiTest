@@ -1122,8 +1122,8 @@ public final class BuilderScreen extends ScaledScreen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mx, int my, float pt) {
-        super.render(g, mx, my, pt);
+    protected void renderScaled(GuiGraphics g, int mx, int my, float pt) {
+        super.renderScaled(g, mx, my, pt);
         g.drawString(font, "§b❄ §fUltimate Auto Builder", 8, 5, 0xFFFFFFFF);
         renderTabs(g, mx, my);
         switch (page) {

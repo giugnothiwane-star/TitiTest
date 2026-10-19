@@ -38,11 +38,16 @@ public abstract class ScaledScreen extends Screen {
     protected abstract void initScaled();
 
     @Override
-    public void renderWithTooltip(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public final void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         g.pose().pushPose();
         g.pose().scale(1f / uiScale, 1f / uiScale, 1f);
-        super.renderWithTooltip(g, (int) (mouseX * uiScale), (int) (mouseY * uiScale), partialTick);
+        renderScaled(g, (int) (mouseX * uiScale), (int) (mouseY * uiScale), partialTick);
         g.pose().popPose();
+    }
+
+    /** Rendu dans l'espace virtuel (les infobulles différées des widgets restent à l'échelle réelle). */
+    protected void renderScaled(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.render(g, mouseX, mouseY, partialTick);
     }
 
     @Override
