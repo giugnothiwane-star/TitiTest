@@ -26,6 +26,14 @@ CLASSES = [
     ("com.mojang.blaze3d.pipeline.RenderTarget", None),
     ("net.minecraft.client.renderer.texture.TextureManager", None),
     ("org.lwjgl.util.tinyfd.TinyFileDialogs", r"tinyfd_openFileDialog|tinyfd_messageBox"),
+    ("net.minecraft.world.level.FoliageColor", None),
+    ("net.minecraft.world.level.GrassColor", None),
+    ("net.minecraft.server.packs.resources.ResourceManager", None),
+    ("net.minecraft.server.packs.resources.Resource", None),
+    ("net.minecraft.client.renderer.FogRenderer$FogMode", None),
+    ("net.minecraft.client.gui.components.EditBox", None),
+    ("net.minecraft.client.gui.GuiGraphics", None),
+    ("com.mojang.blaze3d.platform.Window", None),
 ]
 
 
@@ -40,7 +48,8 @@ def main():
     print("Classpath sonde :", cp)
     for cls, pattern in CLASSES:
         print("\n===== " + cls)
-        r = subprocess.run(["javap", "-cp", cp, "-p", "-c" if pattern else "-public", cls], capture_output=True, text=True)
+        args = ["javap", "-cp", cp] + (["-p", "-c"] if pattern else ["-public"]) + [cls]
+        r = subprocess.run(args, capture_output=True, text=True)
         if r.returncode != 0:
             print("  (introuvable) " + r.stderr.strip()[:200])
             continue
