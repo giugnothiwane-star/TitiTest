@@ -38,8 +38,9 @@ public class UltimateCrystalItem extends IceCrystalItem {
         // Pétales de cerisier discrets quand le cristal est en main (client uniquement).
         if (level.isClientSide() && selected && level.getGameTime() % 7 == 0 && ClientHooks.crystalParticlesEnabled()) {
             double a = level.getRandom().nextDouble() * Math.PI * 2;
-            level.addParticle(ParticleTypes.CHERRY_LEAVES, entity.getX() + Math.cos(a) * 0.6, entity.getY() + 1.4 + level.getRandom().nextDouble() * 0.4,
-                    entity.getZ() + Math.sin(a) * 0.6, 0, 0, 0);
+            // À hauteur de taille et à distance : au niveau des yeux, les pétales masqueraient la vue à la première personne.
+            level.addParticle(ParticleTypes.CHERRY_LEAVES, entity.getX() + Math.cos(a) * 1.1, entity.getY() + 0.3 + level.getRandom().nextDouble() * 0.5,
+                    entity.getZ() + Math.sin(a) * 1.1, 0, 0, 0);
         }
     }
 
