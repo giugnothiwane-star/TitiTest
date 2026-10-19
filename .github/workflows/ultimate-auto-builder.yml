@@ -76,3 +76,21 @@ jobs:
             ultimate-auto-builder/run/logs/
             ultimate-auto-builder/run/gametestserver/logs/
           if-no-files-found: ignore
+
+      # Vérification visuelle : vrai client Minecraft sous affichage virtuel (rendu logiciel Mesa).
+      # Le mod parcourt ses écrans et enregistre des captures, imprimées ensuite dans le journal.
+      - name: Captures d'écran en jeu (client réel, affichage virtuel)
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb libgl1-mesa-dri > /dev/null
+          LEVEL=$(find run -name level.dat -not -path '*/saves/*' | head -n 1)
+          echo "Monde de test : $LEVEL"
+          mkdir -p run/saves && rm -rf run/saves/uab_capture run/screenshots
+          if [ -n "$LEVEL" ]; then cp -r "$(dirname "$LEVEL")" run/saves/uab_capture; rm -f run/saves/uab_capture/session.lock; fi
+          timeout 1200 xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runCaptureClient -Pneo_version=${{ steps.neo.outputs.version }} --console=plain || echo "Client terminé avec le code $?"
+          ls -la run/screenshots || true
+          grep -iE "capture|exception|error|OpenGL|GL version" run/logs/latest.log | tail -n 80 || true
+          java tools/CaptureB64.java run/screenshots 960

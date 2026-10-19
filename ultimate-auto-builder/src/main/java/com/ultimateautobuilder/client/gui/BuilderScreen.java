@@ -217,6 +217,15 @@ public final class BuilderScreen extends Screen {
         return view.get(selectedId);
     }
 
+    /** Mode capture (CI) : sélectionne un modèle par identifiant. */
+    public void captureSelect(String modelId) {
+        ModelEntry e = com.ultimateautobuilder.core.catalog.models.DefaultCatalog.shared().get(modelId);
+        if (e != null) {
+            select(e);
+            rebuildWidgets();
+        }
+    }
+
     private void select(ModelEntry e) {
         selectedId = e == null ? null : e.id();
         PlacementController.SETTINGS.entry = e;

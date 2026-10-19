@@ -476,6 +476,24 @@ public final class ImageBuildScreen extends Screen {
         });
     }
 
+    // ------------------------------------------------------------------ mode capture (CI)
+
+    public void captureLoad(Path file) {
+        S.slot = ViewSlot.FRONT;
+        loadImage(file);
+    }
+
+    public void captureGenerate() {
+        generate();
+    }
+
+    public void capturePreview(int view, boolean highlight) {
+        S.tab = Tab.PREVIEW;
+        S.preview = Math.floorMod(view, PREVIEWS.length);
+        S.highlight = highlight;
+        rebuildWidgets();
+    }
+
     private void onPhoneImage(Path file) {
         status = "§aImage reçue du téléphone : " + file.getFileName();
         if (minecraft != null && minecraft.screen == this) {
