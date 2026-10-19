@@ -26,5 +26,10 @@
   "message.ultimateautobuilder.preview_cancelled": "Preview cancelled",
   "message.ultimateautobuilder.preview_help": "Preview: arrows/PgUp/PgDn move, R rotate, M mirror, =/- size, Enter build, Backspace cancel",
   "screen.ultimateautobuilder.giant_title": "Giant build",
-  "screen.ultimateautobuilder.giant_message": "This structure has %s blocks (%s×%s×%s). Start building?"
+  "screen.ultimateautobuilder.giant_message": "This structure has %s blocks (%s×%s×%s). Start building?",
+  "item.ultimateautobuilder.visual_crystal": "Visual Creation Crystal",
+  "item.ultimateautobuilder.visual_crystal.tooltip1": "Opens the visual studio (shaders, sky, colours, textures)",
+  "item.ultimateautobuilder.visual_crystal.tooltip2": "Right-click, V key or R1 (gamepad) while holding it",
+  "key.ultimateautobuilder.open_studio": "Open the visual studio (crystal held)",
+  "message.ultimateautobuilder.need_visual_crystal": "Hold the Visual Creation Crystal to open the studio"
 }

@@ -19,6 +19,11 @@ sourceSets {
         java {
             srcDirs = ['../../src/main/java']
             include 'com/ultimateautobuilder/core/**'
+            // Parties pures du studio visuel (aucune classe Minecraft).
+            include 'com/ultimateautobuilder/client/visual/VisualProfile.java'
+            include 'com/ultimateautobuilder/client/visual/TextureGroups.java'
+            include 'com/ultimateautobuilder/client/visual/ColorMath.java'
+            include 'com/ultimateautobuilder/client/visual/PerformanceVerdict.java'
         }
         resources.srcDirs = []
     }
@@ -26,6 +31,7 @@ sourceSets {
         java {
             srcDirs = ['../../src/test/java']
             include 'com/ultimateautobuilder/core/**'
+            include 'com/ultimateautobuilder/client/visual/**'
         }
     }
 }

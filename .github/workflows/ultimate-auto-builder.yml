@@ -40,6 +40,17 @@ jobs:
           echo "Version NeoForge utilisée : ${latest}"
           echo "version=${latest}" >> "$GITHUB_OUTPUT"
 
+      - name: Validation GLSL des shaders du studio (glslang)
+        run: |
+          npm install --silent --prefix "$RUNNER_TEMP/glsl" glslang-validator-prebuilt-predownloaded
+          V="$RUNNER_TEMP/glsl/node_modules/glslang-validator-prebuilt-predownloaded/bin/glslangValidator.linux"
+          chmod +x "$V"
+          for f in src/main/resources/assets/ultimateautobuilder/shaders/program/*.fsh; do
+            cp "$f" "$RUNNER_TEMP/shader.frag"
+            "$V" "$RUNNER_TEMP/shader.frag" || { echo "Shader invalide : $f"; exit 1; }
+            echo "OK : $f"
+          done
+
       - name: Compilation, tests unitaires et JAR
         run: ./gradlew build -Pneo_version=${{ steps.neo.outputs.version }} --stacktrace
 

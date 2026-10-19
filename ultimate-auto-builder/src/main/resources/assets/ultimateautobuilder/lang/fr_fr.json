@@ -26,5 +26,10 @@
   "message.ultimateautobuilder.preview_cancelled": "Aperçu annulé",
   "message.ultimateautobuilder.preview_help": "Aperçu : flèches/PgPréc/PgSuiv pour déplacer, R tourner, M miroir, =/- taille, Entrée construire, Retour arrière annuler",
   "screen.ultimateautobuilder.giant_title": "Construction géante",
-  "screen.ultimateautobuilder.giant_message": "Cette structure compte %s blocs (%s×%s×%s). Lancer la construction ?"
+  "screen.ultimateautobuilder.giant_message": "Cette structure compte %s blocs (%s×%s×%s). Lancer la construction ?",
+  "item.ultimateautobuilder.visual_crystal": "Cristal de Création Visuelle",
+  "item.ultimateautobuilder.visual_crystal.tooltip1": "Ouvre le studio graphique (shaders, ciel, couleurs, textures)",
+  "item.ultimateautobuilder.visual_crystal.tooltip2": "Clic droit, touche V ou R1 (manette) en le tenant",
+  "key.ultimateautobuilder.open_studio": "Ouvrir le studio visuel (cristal tenu)",
+  "message.ultimateautobuilder.need_visual_crystal": "Tenez le Cristal de Création Visuelle pour ouvrir le studio"
 }

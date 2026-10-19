@@ -281,6 +281,8 @@ public final class UabGameTests {
     public static void crystalRegistered(GameTestHelper h) {
         h.assertTrue(ModItems.ICE_CRYSTAL.getId().toString().equals("ultimateautobuilder:ice_crystal"), "Identifiant inattendu");
         h.assertTrue(ModItems.ICE_CRYSTAL.get().getDefaultInstance().getMaxStackSize() == 1, "Le cristal doit être non empilable");
+        h.assertTrue(ModItems.VISUAL_CRYSTAL.getId().toString().equals("ultimateautobuilder:visual_crystal"), "Identifiant du cristal visuel inattendu");
+        h.assertTrue(ModItems.VISUAL_CRYSTAL.get().getDefaultInstance().getMaxStackSize() == 1, "Le cristal visuel doit être non empilable");
         h.succeed();
     }
 }
