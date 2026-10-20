@@ -468,21 +468,22 @@ public final class UabGameTests {
         h.assertTrue(baby.getScale() < normal.getScale() && normal.getScale() < boss.getScale(), "Tailles incohérentes");
         h.assertTrue(boss.getMaxHealth() > normal.getMaxHealth() && baby.getMaxHealth() < normal.getMaxHealth(), "Santé incohérente");
         var medium = spawned.get(com.ultimateautobuilder.core.adventure.WardenVariant.MEDIUM);
-        // Disparition sans victoire (commande) : aucune clé.
-        normal.hurt(h.getLevel().damageSources().genericKill(), 100000F);
-        h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 0, "Clé donnée sans victoire");
-        // Vraie victoire du joueur : une clé OP, une seule.
-        medium.hurt(h.getLevel().damageSources().playerAttack(p), 100000F);
-        h.assertTrue(!medium.isAlive(), "Le Warden moyen devrait être vaincu");
-        h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 1, "Clé OP attendue : " + p.getInventory().countItem(ModItems.OP_KEY.get()));
-        com.ultimateautobuilder.adventure.WardenEvents.onDeath(medium, h.getLevel().damageSources().playerAttack(p));
-        h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 1, "Récompense donnée deux fois");
-        // La boîte de collision du Warden est fixe pendant son émergence : comparaison une fois debout.
+        // Le Warden est invulnérable pendant son émergence (vanilla) : tout se vérifie une fois debout.
         h.succeedWhen(() -> {
-            h.assertTrue(baby.getPose() != net.minecraft.world.entity.Pose.EMERGING && boss.getPose() != net.minecraft.world.entity.Pose.EMERGING,
-                    "Émergence en cours");
+            for (var e : spawned.values()) {
+                h.assertTrue(!e.isAlive() || e.getPose() != net.minecraft.world.entity.Pose.EMERGING, "Émergence en cours");
+            }
             h.assertTrue(baby.getBbHeight() < 2.0F && boss.getBbHeight() > 3.5F, "Boîtes de collision : bébé " + baby.getBbHeight()
                     + ", boss " + boss.getBbHeight());
+            // Disparition sans victoire (commande) : aucune clé.
+            normal.hurt(h.getLevel().damageSources().genericKill(), 100000F);
+            h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 0, "Clé donnée sans victoire");
+            // Vraie victoire du joueur : une clé OP, une seule.
+            medium.hurt(h.getLevel().damageSources().playerAttack(p), 100000F);
+            h.assertTrue(!medium.isAlive(), "Le Warden moyen devrait être vaincu");
+            h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 1, "Clé OP attendue : " + p.getInventory().countItem(ModItems.OP_KEY.get()));
+            com.ultimateautobuilder.adventure.WardenEvents.onDeath(medium, h.getLevel().damageSources().playerAttack(p));
+            h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 1, "Récompense donnée deux fois");
             baby.discard();
             boss.discard();
         });
