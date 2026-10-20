@@ -136,6 +136,11 @@ public final class StructurePlacer {
         return !s.hasBlockEntity() && s.getDestroySpeed(level, p) >= 0 && level.getBlockEntity(p) == null;
     }
 
+    /** Position hors des limites de hauteur du monde : jamais modifiable, simplement ignorée. */
+    private static boolean outside(ServerLevel level, BlockPos p) {
+        return level.isOutsideBuildHeight(p);
+    }
+
     /** Une opération ; faux si la position n'est pas chargée. */
     private static boolean step(Task t) {
         ServerLevel level = t.level;
@@ -152,6 +157,10 @@ public final class StructurePlacer {
                 int i = t.index;
                 int x = t.fp[0] + i % w, z = t.fp[1] + (i / w) % d, y = 1 + i / (w * d);
                 BlockPos p = t.world(x, y, z);
+                if (outside(level, p)) {
+                    t.index++;
+                    return true;
+                }
                 if (!level.isLoaded(p)) {
                     return false;
                 }
@@ -176,6 +185,9 @@ public final class StructurePlacer {
                                 ? Blocks.DIRT.defaultBlockState() : Blocks.COBBLESTONE.defaultBlockState();
                         for (int dy = 1; dy <= FOUNDATION_DEPTH; dy++) {
                             BlockPos p = t.world(x, -dy, z);
+                            if (outside(level, p)) {
+                                break;
+                            }
                             if (!level.isLoaded(p)) {
                                 return false;
                             }
@@ -199,6 +211,10 @@ public final class StructurePlacer {
                 boolean attach = B.isAttachment(raw);
                 if (attach == (t.phase == Phase.ATTACH)) {
                     BlockPos p = t.world(VoxelModel.cx(c) - m.anchorX(), VoxelModel.cy(c) - m.anchorY(), VoxelModel.cz(c) - m.anchorZ());
+                    if (outside(level, p)) {
+                        t.index++;
+                        return true;
+                    }
                     if (!level.isLoaded(p)) {
                         return false;
                     }
@@ -218,6 +234,10 @@ public final class StructurePlacer {
                 long c = m.cell(t.index);
                 if (B.needsShapeUpdate(m.stateOf(c))) {
                     BlockPos p = t.world(VoxelModel.cx(c) - m.anchorX(), VoxelModel.cy(c) - m.anchorY(), VoxelModel.cz(c) - m.anchorZ());
+                    if (outside(level, p)) {
+                        t.index++;
+                        return true;
+                    }
                     if (!level.isLoaded(p)) {
                         return false;
                     }
@@ -236,6 +256,10 @@ public final class StructurePlacer {
                 }
                 Blueprint.Marker mk = t.bp.markers().get(t.index);
                 BlockPos p = t.world(mk.x(), mk.y(), mk.z());
+                if (outside(level, p)) {
+                    t.index++;
+                    return true;
+                }
                 if (!level.isLoaded(p)) {
                     return false;
                 }

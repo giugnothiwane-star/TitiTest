@@ -413,8 +413,9 @@ public final class UabGameTests {
         com.ultimateautobuilder.adventure.Locks.openChest(h.getLevel(), pos, locked, p, net.minecraft.world.InteractionHand.MAIN_HAND, right);
         h.assertTrue(h.getLevel().getBlockState(pos).is(Blocks.CHEST), "Le coffre ne s'est pas ouvert");
         h.assertTrue(right.getCount() == 1, "Clé non consommée ou consommée deux fois : " + right.getCount());
+        // Le butin est tiré à l'ouverture (menu ouvert pour le joueur) : le coffre est rempli, sa table consommée.
         h.assertTrue(h.getLevel().getBlockEntity(pos) instanceof net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity be
-                && be.getLootTable() != null, "Table de butin absente");
+                && (be.getLootTable() != null || !be.isEmpty()), "Coffre ouvert sans butin");
         // Second clic : le coffre est ordinaire, plus rien n'est consommé.
         com.ultimateautobuilder.adventure.Locks.openChest(h.getLevel(), pos, h.getLevel().getBlockState(pos), p,
                 net.minecraft.world.InteractionHand.MAIN_HAND, right);
@@ -466,7 +467,9 @@ public final class UabGameTests {
         var baby = spawned.get(com.ultimateautobuilder.core.adventure.WardenVariant.BABY);
         h.assertTrue(baby.getScale() < normal.getScale() && normal.getScale() < boss.getScale(), "Tailles incohérentes");
         h.assertTrue(boss.getMaxHealth() > normal.getMaxHealth() && baby.getMaxHealth() < normal.getMaxHealth(), "Santé incohérente");
-        h.assertTrue(baby.getBbHeight() < normal.getBbHeight(), "Boîte de collision non réduite");
+        // Pendant l'émergence, la boîte du Warden est fixe ; la taille debout reflète la variante.
+        h.assertTrue(baby.getDimensions(net.minecraft.world.entity.Pose.STANDING).height()
+                < normal.getDimensions(net.minecraft.world.entity.Pose.STANDING).height(), "Boîte de collision non réduite");
         // Disparition sans victoire (commande) : aucune clé.
         normal.hurt(h.getLevel().damageSources().genericKill(), 100000F);
         h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 0, "Clé donnée sans victoire");
@@ -488,7 +491,9 @@ public final class UabGameTests {
         ServerPlayer p = survivalPlayer(h);
         p.getInventory().clearContent();
         var data = com.ultimateautobuilder.adventure.AdventureData.get(h.getLevel().getServer());
+        // La connexion du joueur factice a pu donner le kit : on repart d'un joueur jamais équipé.
         data.player(p.getUUID()).kitGiven = false;
+        p.getPersistentData().remove("PlayerPersisted");
         com.ultimateautobuilder.adventure.StarterKit.onLogin(p);
         var inv = p.getInventory();
         h.assertTrue(inv.countItem(net.minecraft.world.item.Items.WOODEN_PICKAXE) == 1 && inv.countItem(net.minecraft.world.item.Items.WOODEN_AXE) == 1
@@ -527,7 +532,7 @@ public final class UabGameTests {
     /** Placeur d'aventure : maison posée, coffre marqué rempli par sa table de butin, porte présente. */
     @GameTest(template = TEMPLATE, timeoutTicks = 600, batch = "uab_placer")
     public static void adventureHousePlaced(GameTestHelper h) {
-        var bp = com.ultimateautobuilder.core.adventure.AdventureGen.build(com.ultimateautobuilder.core.adventure.StructureType.CELLAR_HOUSE, 42L);
+        var bp = com.ultimateautobuilder.core.adventure.AdventureGen.build(com.ultimateautobuilder.core.adventure.StructureType.HIDDEN_CHEST_HOUSE, 42L);
         BlockPos o = h.absolutePos(new BlockPos(18, 0, 18));
         int[][] box = new int[1][];
         com.ultimateautobuilder.adventure.StructurePlacer.enqueue(h.getLevel(), bp, o.getX(), o.getY(), o.getZ(), 0, b -> box[0] = b);
