@@ -2,22 +2,18 @@
 
 Mod Minecraft Java **1.21.1** pour **NeoForge 21.1.x** (Java 21), en **un seul fichier JAR**, centré sur **un seul objet : l'Ultimate Crystal — Creative Architect** (`ultimateautobuilder:ultimate_crystal`).
 
-Clic droit avec le cristal (ou touche **B**, ou **R1** à la manette) : ouverture du **hub central** à dix sections :
+Le mod transforme la partie en **aventure d'exploration** : on commence avec une petite maison en bois et un équipement modeste, puis on explore le monde à la recherche de **maisons, ruines, châteaux et donjons générés**, de **clés** de cinq raretés, de **cartes au trésor**, de **spawners de château** et, très rarement, d'un **Warden** — voire d'un **Boss Warden** — dont la victoire donne la **clé OP** du **sanctuaire OP**. Il n'y a **plus aucun menu de maisons à acheter ou à débloquer**.
 
-| Section | Contenu |
+| Système | Résumé |
 |---|---|
-| 1. Maisons | Catalogue de **454 constructions** dont la **collection Sakura** (20 maisons japonaises) et 48 maisons et villas ; aperçus 3D texturés, aperçu fantôme dans le monde, construction progressive **par le serveur** |
-| 2. Shaders gratuits | Profils **Performance / Équilibré / Qualité / Ultra / Personnalisé** — **100 % gratuits**, aucun achat, abonnement ni microtransaction |
-| 3. Personnalisation | Studio visuel : luminosité, ciel, atmosphère, eau, végétation, bois, couleurs, textures, profils |
-| 4. Quêtes | Chaîne de 15 quêtes **vérifiées par le serveur** (statistiques de minage, progrès vanilla, constructions réellement terminées) ; récompenses récupérables une seule fois |
-| 5. Matériaux | Pierre, fer, or, diamant, Netherite, cuivre, bois de cerisier… présents dans l'inventaire, et prochains déblocages possibles |
-| 6. Débloquées | Constructions accessibles au joueur |
-| 7. Favoris | Constructions marquées d'une étoile |
-| 8. Projets | Modèles enregistrés sur le monde et **Image → Construction** (analyse locale, aucune image envoyée sur Internet) |
-| 9. Historique | Constructions passées, annulation et retour arrière |
-| 10. Paramètres | Réglages du mod, touches et manette |
-
-**Progression par matériaux** (en survie ; tout est libre en créatif, réglable par le serveur) : Architecte débutant → Constructeur en pierre → Architecte du fer → Architecte du diamant → Architecte Netherite. Chaque construction verrouillée affiche son **coût de déblocage** (payé une seule fois, distinct des blocs de la construction) avant confirmation ; le serveur vérifie le niveau et l'inventaire, retire les objets **une seule fois** et rien en cas d'échec.
+| Départ | Kit unique pour chaque nouveau joueur : pioche, hache et épée en bois, 32 bûches de chêne, 32 pierres, 1 établi, 1 Ultimate Crystal ; **maison de départ en bois** construite à côté de lui (jamais sur lui ni sur une construction) |
+| Exploration | 14 types de maisons (petite maison en bois, en pierre, abandonnée, délabrée, isolée, cachée en forêt, envahie de végétation, ruines, avec cave, à pièce secrète, à coffre caché, à passage dissimulé, rare, légendaire) et 6 châteaux/donjons (petite forteresse, château abandonné, château en ruines, forteresse souterraine, château maudit, château légendaire), générés dans les **nouveaux** chunks |
+| Clés | Commune, peu commune, rare, légendaire, **OP** : chaque clé n'ouvre que les coffres verrouillés et portes de coffre-fort de **sa** rareté et n'est consommée qu'après une ouverture réussie |
+| Trésors | Cartes sur parchemin avec **croix rouge** ; la position est fixée une fois pour toutes, le coffre est enterré sous une croix de terre stérile |
+| Spawners | Les châteaux ont **trois spawners** : **bébé**, **moyen**, **normal** ; **4 créatures au plus par cycle**, créatures ordinaires **équiprobables**, épuisement après 3 cycles |
+| Warden | **0,5 %** par tentative valide (châteaux maudits et légendaires) ; variantes bébé, moyenne, normale et **Boss Warden** (barre de boss) ; clé OP seulement pour une **vraie victoire** |
+| Récompenses | Ensembles d'armure complets (cuir → Netherite), objets en attente si l'inventaire est plein, animation du cristal |
+| Cristal | Hub : récompenses, découvertes, trésors et clés, constructeur, **shaders gratuits**, personnalisation, projets, historique, paramètres |
 
 > ⚠️ **État de vérification — à lire.** Voir [Rapport de vérification](#rapport-de-vérification) : tout le code est compilé par la CI GitHub Actions contre le vrai NeoForge 1.21.1, les tests unitaires et les **GameTests** (scénarios exécutés dans un vrai serveur Minecraft) y passent. Un **vrai client Minecraft** est aussi lancé par la CI sous affichage virtuel (rendu logiciel Mesa) : le mod ouvre ses écrans, pose une construction et publie des captures d'écran, relues à chaque modification. Aucun humain n'a encore joué avec la souris, la manette, un téléphone ou une carte graphique réelle.
 
@@ -27,10 +23,10 @@ Clic droit avec le cristal (ou touche **B**, ou **R1** à la manette) : ouvertur
 
 1. [Installation](#installation)
 2. [Compilation](#compilation)
-3. [Utilisation](#utilisation)
-4. [Ultimate Crystal et manette](#ultimate-crystal-et-manette)
-5. [Catalogue et collection Sakura](#catalogue-et-collection-sakura)
-6. [Progression et quêtes](#progression-et-quêtes)
+3. [Aventure](#aventure)
+4. [Utilisation du constructeur](#utilisation-du-constructeur)
+5. [Ultimate Crystal et manette](#ultimate-crystal-et-manette)
+6. [Catalogue et collection Sakura](#catalogue-et-collection-sakura)
 7. [Image → Construction](#image--construction)
 8. [Shaders gratuits et studio visuel](#shaders-gratuits-et-studio-visuel)
 9. [Commandes](#commandes)
@@ -80,16 +76,56 @@ gradle test
 gradle test -PpreviewDir=/tmp/apercus -PpreviewFilter=sakura   # images PNG isométriques des modèles
 ```
 
-## Utilisation
+## Aventure
+
+### Départ
+- À la **première connexion d'un joueur nouveau** (aucune minute de jeu enregistrée, jamais équipé par une ancienne version du mod) : kit exact — 1 pioche, 1 hache, 1 épée en bois, 32 bûches de chêne, 32 pierres, 1 établi, 1 Ultimate Crystal. Aucun diamant, aucune Netherite, aucun objet OP.
+- **Maison de départ** : maison de chêne de 9 × 7 (lit, établi, four, coffre, lanterne, fenêtres, porte), construite à 10–26 blocs du joueur sur un terrain naturel plat et sec, porte tournée vers lui. Si aucun emplacement sûr n'existe, rien n'est construit (message).
+- Une seule fois : l'état est enregistré dans le monde (`<monde>/data/ultimateautobuilder_adventure.dat`). Ni la mort ni la reconnexion ne redonnent le kit. Les joueurs existants ne reçoivent rien et ne perdent rien.
+
+### Structures générées
+- Uniquement dans les **chunks nouvellement générés** de l'Overworld (jamais sur une zone déjà explorée). Grilles déterministes : une maison au plus par case de 14 × 14 chunks, un château par case de 36 × 36 (réglables), position et type tirés de la graine du monde.
+- Avant la pose : terrain naturel (aucune entité de bloc, donc aucun coffre ni établi de joueur), relief limité, pas d'eau, ni océan ni rivière, aucune structure vanilla, distance minimale avec les autres structures. Un emplacement refusé n'est jamais retenté.
+- Pose **progressive** sous budget de temps (4 ms par tick par défaut) : aplanissement du terrain naturel, fondations jusqu'au sol, blocs, objets accrochés, formes des escaliers et barrières, puis remplissage des coffres. Reprise automatique après un redémarrage.
+- **Maisons** : chaque type change réellement l'architecture (matériaux, état, étage, cave à trappe et échelle, cloison secrète à bibliothèques ciselées, coffre encastré sous un tapis, trappe cachée sous un tapis, clôture et portillon, lierre et feuillage, murs effondrés).
+- **Châteaux** : enceinte crénelée, quatre tours à échelle et meurtrières, porte, cour, donjon avec **salle des trois spawners** (bébé, moyen, normal), escalier vers l'étage et **salle du trésor** fermée par une porte de coffre-fort. La forteresse souterraine est un donjon enterré desservi par un escalier-tunnel depuis une guérite.
+- **Sanctuaire OP** : unique par monde, entre 1 500 et 2 500 blocs du point d'apparition (graine du monde) ; enceinte de quartz et purpur dont l'**unique entrée est une porte de coffre-fort OP**, grand hall, trois coffres verrouillés OP et deux coffres légendaires. Clic droit avec une clé OP : distance et direction.
+- Un message signale chaque **découverte** ; la liste est dans le cristal.
+
+### Clés, serrures et butin
+| Clé | Où la trouver | Ce qu'elle ouvre |
+|---|---|---|
+| Commune | coffres communs et peu communs | coffres verrouillés communs |
+| Peu commune | coffres peu communs et rares | maisons rares, châteaux abandonnés |
+| Rare | coffres peu communs, rares, légendaires | forteresses souterraines, châteaux maudits |
+| Légendaire | coffres rares et légendaires, ensemble en diamant | maisons et châteaux légendaires |
+| OP | victoire contre un Warden des châteaux, ensemble en Netherite | sanctuaire OP |
+
+Coffres verrouillés et portes de coffre-fort sont **incassables**. Une mauvaise clé n'est jamais consommée ; la bonne l'est après l'ouverture ; un second clic ne trouve plus de serrure. Le butin d'un coffre est tiré **une seule fois**, à sa première ouverture (tables de butin du jeu) : fermer et rouvrir ne régénère rien.
+
+Tables (`data/ultimateautobuilder/loot_table/`) : **commune** (terre, bois, pierre, outils en bois et pierre, nourriture, cuir, un peu de fer et d'or, pièces d'or et de mailles ; jamais de diamant ni de Netherite), **peu commune** (outils et armures en fer, or, mailles), **rare** (fer enchanté, livres, diamant rare), **légendaire** (outils et armures en diamant enchantés, ensemble complet en diamant à 3 %, aucune Netherite hormis un débris), **OP** (outils en Netherite **Efficacité XXV**, armures Protection VI, ensemble complet en Netherite à 4 %), coffres verrouillés (un cran au-dessus), trésors de carte, Boss Warden (pioche **Efficacité XXX**).
+
+### Spawners de château et Warden
+- Trois spawners par château concerné : **bébé**, **moyen**, **normal**. La famille du spawner (morts-vivants, araignées, illageois ou mixte) fixe les créatures autorisées ; la catégorie fixe leur variante — les deux étapes sont distinctes et ne se mélangent jamais.
+- **Cycle** : une tentative toutes les 2 secondes au plus, seulement si un joueur est à moins de 16 blocs ; **4 créatures au plus par cycle**, le cycle suivant attend que les 4 aient disparu puis 30 secondes ; **épuisement après 3 cycles** (réglable). État sauvegardé avec le bloc.
+- **Variantes réelles** : zombies, husks, zombies-villageois et noyés utilisent le bébé natif de Minecraft ; les autres (squelettes, araignées, illageois…) passent par l'**attribut d'échelle** de la 1.21 — rendu et boîte de collision réduits ensemble — avec santé, dégâts et vitesse ajustés (bébé : taille ½, santé ½ ; moyen : taille ¾, santé ¾).
+- **Équiprobabilité** : les créatures ordinaires éligibles ont exactement la même probabilité. Jamais : dragon de l'Ender, Wither, Warden (hors système spécial), géant, gardien ancien, ghast, ravageur, creeper (détruit les structures), enderman (déplace les blocs), slimes, golems, évocateur, shulker, piglins, hoglins, phantoms, breeze, vex.
+- **Warden** : dans les spawners des châteaux maudits et légendaires seulement (salles hautes de 7 blocs), **un tirage à 0,5 % par tentative valide**. Variantes : normal 70 %, bébé 14 %, moyen 14 %, **Boss Warden 2 %** ; dans un spawner de catégorie, la distribution est restreinte aux variantes de cette catégorie (spawner bébé → bébé ; moyen → moyen ; normal → normal 70/72 ou boss 2/72 ≈ 2,8 %). Le Boss Warden (taille ×1,4, santé 1 000, dégâts ×1,5) a une barre de boss.
+- **Récompense** : clé OP (et butin de boss pour le Boss Warden) **au joueur qui porte le coup fatal** (directement ou par projectile), une seule fois par Warden. Un Warden supprimé par commande, nettoyé ou mort sans coup d'un joueur ne donne rien.
+
+### Ensembles d'armure
+Portez les quatre pièces d'une même matière, puis **Récompenses → Récupérer** dans le cristal (une fois par ensemble) : cuir → 2 lingots de fer + 16 pains ; or → 8 diamants + 4 pommes dorées ; mailles → 16 lingots de fer + 8 émeraudes ; fer → 8 diamants + 16 émeraudes ; diamant → 4 lingots de Netherite + 1 clé légendaire ; Netherite → Pioche de l'Architecte (Netherite, Efficacité XXX, Solidité III, Fortune III) + 1 clé OP. Inventaire plein : les objets restent **en attente** dans le cristal.
+
+## Utilisation du constructeur
 
 1. Prendre l'Ultimate Crystal (onglet créatif « Ultimate Auto Builder », donné à la première connexion, recette, ou `/uab give`).
-2. Le tenir en main et ouvrir le hub (clic droit, **B** ou **R1**), puis **1. Maisons** ou une catégorie.
+2. Le tenir en main et ouvrir le hub (clic droit, **B** ou **R1**), puis **4. Constructeur**.
 3. Choisir une catégorie (onglets, ou **L1/R1** à la manette), chercher par nom ou mot-clé (insensible aux accents et à la casse : « sakura », « chateau », « maison japonaise »…), trier (nom, taille, complexité, catégorie) et filtrer par taille.
-4. Sélectionner une carte : le panneau de droite affiche un grand aperçu 3D texturé (glisser pour tourner, molette pour zoomer), les dimensions réelles et le nombre de blocs. Une construction verrouillée affiche son niveau requis et son coût ; le bouton **Débloquer** (infobulle : coût exact) demande au serveur de retirer les matériaux.
+4. Sélectionner une carte : le panneau de droite affiche un grand aperçu 3D texturé (glisser pour tourner, molette pour zoomer), les dimensions réelles et le nombre de blocs.
 5. Régler :
    - **Taille** : Petit, Normal, Grand, Géant ou Personnalisée (nombre de blocs, borné par modèle) ;
    - **Rotation** (0/90/180/270°) et **miroir** ;
-   - **Mode** : *Normal*, *Prudent* (n'écrase que l'air et les blocs remplaçables), *Terrain* (fondations jusqu'au sol), *Aérien* (structure surélevée). La gratuité (*mode gratuit* ou *mode ressources*) est un réglage serveur ;
+   - **Mode** : *Normal*, *Prudent* (n'écrase que l'air et les blocs remplaçables), *Terrain* (fondations jusqu'au sol), *Aérien* (structure surélevée). En survie, le constructeur prélève les blocs dans l'inventaire (réglage serveur `freeBuild`, désactivé par défaut) ; rien n'est retiré en créatif ;
    - **Creux** : intérieur vide pour les grandes statues et créatures ;
    - **Position** : devant moi (distance réglable), ma position, coordonnées, zone sélectionnée, bloc visé.
 6. **Aperçu** : la structure apparaît en fantôme translucide dans le monde, sans poser aucun bloc. Flèches / Pg.Préc / Pg.Suiv pour la déplacer, **R** tourner, **M** miroir, **=** / **-** taille, **Origine** recentrer, **Entrée** construire, **Retour arrière** annuler (touches configurables dans *Options → Commandes*).
@@ -137,28 +173,12 @@ Les bâtiments utilisent des générateurs architecturaux (fondations, murs à c
 
 Générateur dédié (`core/generator/Japanese.java`) : soubassement de pierre, poteaux et poutres en bois sombre, murs blancs ou roses, fenêtres à croisillons, engawa (véranda), toits à double pente avec débords et faîtage, intérieurs (tatamis, table basse, lanternes, rangements), jardins (cerisiers en fleurs, pétales au sol, lanternes de pierre, bassins, ponts rouges, torii, chemins de pierre, bambous).
 
-| Maison | Niveau requis | Coût de déblocage |
-|---|---|---|
-| Petite maison japonaise sous les cerisiers | Débutant | gratuit |
-| Maison au chemin de pierre fleuri | Débutant | gratuit |
-| Minka traditionnelle, Maison Sakura rose et blanche, Maison en bois et jardin japonais, Maison à terrasse face aux cerisiers, Maison et allée de lanternes, Maison et portique torii, Maison de campagne et rizières, Maison et jardin de pierres, Maison et petite serre | Pierre | 16 bûches de cerisier, 32 pierres taillées |
-| Villa japonaise moderne, Maison au bassin et pont rouge, Maison à étage et balcon de bois, Maison sur trois niveaux, Maison sur terrasse surélevée | Fer | 24 bûches de cerisier, 8 lingots de fer, 4 lanternes |
-| Maison à cour intérieure et cerisier, Maison au cœur d'une forêt de cerisiers, Ryokan et bain extérieur | Diamant | 32 bûches de cerisier, 3 diamants |
-| Demeure japonaise de prestige | Netherite | 1 lingot de Netherite, 8 diamants, 48 bûches de cerisier (ou récompense de la quête « Sous les cerisiers ») |
+Les 20 maisons Sakura sont disponibles dans le constructeur (blocs de l'inventaire en survie).
 
 ### Mobs Minecraft et constructions inspirées
 
 - **Mobs Minecraft** (88) : les mobs de Minecraft 1.21.1 en sculptures de blocs (creeper, zombie, squelette, enderman tenant son bloc, araignée, sorcière, slime, ghast, blaze, warden, breeze, villageois, illageois, ravageur, piglin, wither, dragon de l'Ender, golems, animaux, poissons, axolotl…). Leur taille se règle par **dimension principale** (8 à 128 blocs).
 - **Inspirations (vos images)** (19) : maisons roses sur lac et ponton, cottage rose, serre en dôme, maison sous un cerisier géant, cerisier géant avec cabane, cours asiatiques rose et blanche, palais à pagodes, maison asiatique avec jardin, ferme sur soubassement de pierre, chalet au toit sombre, maison hiver/automne, grand manoir en bois, villa blanche moderne, immeuble d'appartements éclairé, chaumière au moulin, château à drapeaux, manoir fortifié.
-
-## Progression et quêtes
-
-- **Niveaux** : Architecte débutant (132 constructions de départ, gratuites) → Constructeur en pierre (171) → Architecte du fer (96) → Architecte du diamant (26) → Architecte Netherite (29). Les coûts sont centralisés dans `core/progression/ProgressionRules.java` (règle par défaut selon catégorie et complexité, surcharges thématiques pour la collection Sakura).
-- **Exemples de maisons** : Petite maison en bois (gratuite) ; Maison moderne (pierre : 48 pierres taillées) ; Maison moderne avec piscine (fer : 10 lingots de fer, 32 pierres taillées) ; Villa de luxe (diamant : 3 diamants, 16 lingots de fer).
-- **Déblocage** : le coût est affiché avant confirmation (fiche + infobulle du bouton). Le serveur vérifie le niveau puis la présence de **tous** les matériaux, les retire en une seule transaction ; déjà débloquée = rien n'est retiré (double clic, paquet répété) ; matériaux insuffisants = rien n'est retiré et la liste des manques est affichée. Le coût de déblocage est **distinct** des blocs nécessaires à la construction (mode ressources du serveur).
-- **Quêtes** (15) : Découvrir l'Ultimate Crystal → Ouvrir le catalogue → Première maison → Tailleur de pierre (64 pierres minées, niveau pierre) → Charbon de bois / Reflets de cuivre / Maison en pierre (un déblocage) → Forgeron (24 minerais de fer, niveau fer) → Filon d'or / Chantiers en série (3 constructions) → Éclat de diamant (5 minerais, niveau diamant) → Sous les cerisiers (une maison Sakura construite, offre la Demeure de prestige) / Porte du Nether (progrès vanilla) → Débris antiques (4 débris, niveau Netherite) → Grand architecte (10 constructions). États : verrouillée, en cours, récompense à récupérer, terminée. Cliquer ne suffit jamais : l'avancement vient des statistiques et progrès du serveur et des constructions réellement terminées. Les shaders ne sont **jamais** une récompense : ils sont gratuits pour tous.
-- **Sauvegarde** : un fichier par joueur dans le monde (`<monde>/data/ultimateautobuilder/progress/<uuid>.properties`), écriture atomique ; un fichier partiellement corrompu garde ses champs valides et une copie `.corrompu` est conservée.
-- **Mode** (`progressionMode`, configuration serveur) : `CREATIVE_FREE` (défaut : progression en survie, tout libre en créatif), `ALWAYS`, `OFF`.
 
 ## Image → Construction
 
@@ -223,13 +243,17 @@ Permissions (API de permissions NeoForge, compatible LuckPerms) : `ultimateautob
 | `tickBudgetMs`, `adaptiveThrottle`, `targetMspt` | 15, oui, 40 | Budget de temps par tick et ralentissement automatique si le serveur peine |
 | `maxBlocksPerBuild`, `maxDimension`, `giantThreshold` | 2 000 000, 512, 150 000 | Limites et seuil de confirmation |
 | `maxActiveBuilds`, `maxActiveBuildsPerPlayer`, `maxBuildDistance`, `requestCooldownTicks` | 3, 1, 512, 20 | Anti-abus |
-| `freeBuild` | oui | Gratuit, ou *mode ressources* (blocs prélevés dans l'inventaire) |
+| `freeBuild` | non | Constructeur gratuit, ou *mode ressources* (blocs prélevés dans l'inventaire en survie) |
 | `replaceExisting`, `protectValuableBlocks`, `protectedBlocks`, `fluidMode` | | Ce qui peut être remplacé |
 | `respectProtectionEvents` | oui | Interroge les mods de protection avant chaque bloc |
 | `hollowLargeStatues`, `aerialHeight`, `foundationMaxDepth`, `restrictToSelection` | | Options de construction |
 | `historySize`, `prudentUndo`, `checkpointSeconds` | 20, oui, 30 | Historique, retour arrière, reprise après redémarrage |
 | `maxImportKilobytes` | 8192 | Taille maximale d'un import et d'un modèle envoyé par Image → Construction |
-| `progressionMode` | `CREATIVE_FREE` | Progression par matériaux et quêtes : `CREATIVE_FREE`, `ALWAYS`, `OFF` |
+| `starterKit`, `starterHouse` | oui, oui | Kit et maison de départ pour les nouveaux joueurs |
+| `worldStructures` | oui | Maisons, châteaux et sanctuaire générés dans les nouveaux chunks |
+| `houseSpacingChunks`, `castleSpacingChunks` | 14, 36 | Taille des grilles de génération (rareté) |
+| `spawnerMaxCycles` | 3 | Cycles de 4 créatures avant épuisement d'un spawner |
+| `structureBudgetMs` | 4 | Temps maximal par tick pour poser les structures générées |
 
 ## Modèles personnalisés
 
@@ -243,7 +267,7 @@ Chaque import est validé (taille du fichier, dimensions, nombre de blocs, synta
 
 ## Sécurité multijoueur et performances
 
-- Le client n'envoie qu'un identifiant de modèle et des paramètres ; le serveur vérifie le **déblocage** (progression), permissions, existence du modèle, bornes de taille, distance, bordure du monde, hauteur, limites de blocs, confirmation des constructions géantes, quotas et délai entre demandes.
+- Le client n'envoie qu'un identifiant de modèle et des paramètres ; le serveur vérifie permissions, existence du modèle, bornes de taille, distance, bordure du monde, hauteur, limites de blocs, confirmation des constructions géantes, quotas et délai entre demandes.
 - Génération des modèles sur un pool de threads dédié (jamais sur le thread serveur) ; pose progressive avec budget de blocs **et** de temps par tick, régulée selon la charge mesurée.
 - Chunks maintenus chargés par tickets pendant la construction ; ordre de pose « blocs pleins puis éléments attachés » ; mise à jour des formes (clôtures, vitres, escaliers) après la pose.
 - Blocs précieux et indestructibles protégés, contenu des coffres sauvegardé avant remplacement, événements de protection respectés.
@@ -263,14 +287,15 @@ com.ultimateautobuilder
 │   ├── validation/  Limites et validation
 │   ├── importer/    .uabm, .vox, structure brute
 │   ├── image/       Image → Construction : chargement, analyse, reconstruction, styles, vues, plan, éditeur, projets
-│   ├── progression/ Niveaux, coûts de déblocage, quêtes, progression d'un joueur (sauvegarde tolérante)
+│   ├── adventure/   Règles de spawn (équiprobabilité, Warden 0,5 %, variantes), cycles, clés, récompenses d'armure, générateurs de maisons/châteaux/sanctuaire, contrôle d'accès
 │   └── render/      Rendu isométrique (miniatures de secours, tests)
 ├── builder/         Moteur serveur : plan, tâches de pose/restauration, gestionnaire, tickets de chunks
 ├── network/         Paquets client ↔ serveur
 ├── command/         /uab
 ├── config/          Configs client et serveur
 ├── storage/         Historique, journaux d'annulation, modèles personnalisés
-├── progression/     Progression serveur : fichiers par joueur, quêtes vérifiées, déblocages sur l'inventaire réel
+├── adventure/       Données du monde, génération et pose des structures, serrures, trésors, variantes et Warden, kit, récompenses
+├── block/           Coffre verrouillé, porte de coffre-fort, spawner de château
 ├── item/, registry/ Ultimate Crystal (et anciens cristaux), onglet créatif
 ├── client/          Hub de l'Ultimate Crystal, catalogue, paramètres, aperçus 3D texturés (render/), fantôme, manette, barre de progression, mode capture CI (dev/)
 │   ├── image/       Écran Image → Construction, sélecteur de fichiers, réception téléphone, envoi au serveur
@@ -280,9 +305,9 @@ com.ultimateautobuilder
 
 ## Tests
 
-- **Tests unitaires** (`src/test`, JUnit 5) — catalogue (454 modèles, absence de Pikachu/Pokémon/anime, identifiants et noms uniques, objectifs par catégorie, recherche sans accents), génération (dimensions conformes à chaque taille, aucune cellule hors limites, palettes valides, déterminisme, couleur visible de chaque bloc), placement, import (.uabm, fichiers corrompus ou trop grands rejetés, .vox), rendu des miniatures, **progression** (7 tests : règle valide pour chaque modèle, maisons de départ, niveau puis matériaux, consommation unique, manques signalés sans retrait, chaîne de quêtes et récompense unique, chaîne complète jusqu'à Netherite, sauvegarde et champs corrompus), studio visuel (profils, bornes, couleurs, verdict FPS), **Image → Construction** (26 tests : chargement et rejets — vide, corrompu, tronqué, WebP, dimensions excessives —, réduction des grandes images, séparation sujet/fond, transparence, estimation du sujet, repli sans fond, hauteur et proportions, blocs vus/estimés, couleurs de face, enveloppe multi-vues, modes d'arrière, styles vanilla/voxel art/miniature/géant/personnalisé, niveau de détail, bâtiment creux, vues et couches, comparaison mesurée, plan et étapes, conversion vers le moteur, annuler/rétablir, projet sauvegardé/relu avec nom piégé, limite de volume).
-- **GameTests** (`./gradlew runGameTestServer`, dans un vrai serveur) — petite maison, statue tournée et **maison Sakura** construites, Pikachu absent du catalogue, **progression avec un vrai joueur serveur** (construction verrouillée refusée, quête validée par une vraie statistique de minage, déblocage qui retire exactement le coût une seule fois, rien retiré si incomplet, relecture du fichier), **Ultimate Crystal seul dans l'onglet créatif** et recettes présentes, annulation, retour arrière, refus hors hauteur, mode prudent, palette de tous les modèles résolue dans le registre 1.21.1, mode couche par couche avec pauses et reprises, zone vide uniquement qui refuse les obstacles, pause manuelle qui gèle la progression, **tous les blocs d'Image → Construction existent**, **chaîne complète image → analyse → reconstruction → format réseau → construction par le moteur**.
-- **Scénarios manuels conseillés** : ouvrir le hub avec l'Ultimate Crystal (clic droit, B, V, R1) et sans cristal ; en survie : quêtes, minage, récupération des récompenses, déblocage avec et sans matériaux ; multijoueur avec deux joueurs à des niveaux différents ; naviguer au pad ; aperçu fantôme puis construction ; pause/reprise ; studio : préréglages, banc d'essai, export/import de profil ; Image → Construction : photo depuis le PC puis depuis un téléphone, génération, édition, envoi et construction ; serveur dédié avec un joueur non opérateur.
+- **Tests unitaires** (`src/test`, JUnit 5) — catalogue (454 modèles, absence de Pikachu/Pokémon/anime, identifiants et noms uniques, objectifs par catégorie, recherche sans accents), génération (dimensions conformes à chaque taille, aucune cellule hors limites, palettes valides, déterminisme, couleur visible de chaque bloc), placement, import (.uabm, fichiers corrompus ou trop grands rejetés, .vox), rendu des miniatures, **aventure** (12 tests : équiprobabilité des créatures (test du χ²), exclusions, familles séparées, taux Warden de 0,5 % mesuré sur 2 millions de tirages, distribution des variantes, catégories jamais mélangées, cycle de 4 créatures et épuisement, clés, ensembles d'armure, chaque coffre/spawner/coffre verrouillé de chaque structure accessible à pied (parcours en largeur), trois spawners bébé/moyen/normal par château, planchers et toits complets), studio visuel (profils, bornes, couleurs, verdict FPS), **Image → Construction** (26 tests : chargement et rejets — vide, corrompu, tronqué, WebP, dimensions excessives —, réduction des grandes images, séparation sujet/fond, transparence, estimation du sujet, repli sans fond, hauteur et proportions, blocs vus/estimés, couleurs de face, enveloppe multi-vues, modes d'arrière, styles vanilla/voxel art/miniature/géant/personnalisé, niveau de détail, bâtiment creux, vues et couches, comparaison mesurée, plan et étapes, conversion vers le moteur, annuler/rétablir, projet sauvegardé/relu avec nom piégé, limite de volume).
+- **GameTests** (`./gradlew runGameTestServer`, dans un vrai serveur) — petite maison, statue tournée et **maison Sakura** construites, Pikachu absent du catalogue, **tables de butin** tirées 60 fois chacune (enchantements compatibles, aucun diamant/Netherite dans les coffres communs, Efficacité XXV/XXX présente en OP), **clés** (mauvaise clé non consommée, bonne clé consommée une fois), **spawner bébé** (uniquement des bébés, 4 au plus), **variantes du Warden** et clé OP seulement après une vraie victoire, une seule fois, **kit de départ** exact et unique, **ensemble en fer** (rien avec 3 pièces, une seule récompense), **placeur** de structure (coffres remplis, porte), onglet créatif et recettes, annulation, retour arrière, refus hors hauteur, mode prudent, palette de tous les modèles résolue dans le registre 1.21.1, mode couche par couche avec pauses et reprises, zone vide uniquement qui refuse les obstacles, pause manuelle qui gèle la progression, **tous les blocs d'Image → Construction existent**, **chaîne complète image → analyse → reconstruction → format réseau → construction par le moteur**.
+- **Scénarios manuels conseillés** : ouvrir le hub avec l'Ultimate Crystal (clic droit, B, V, R1) et sans cristal ; en survie : nouveau monde (kit, maison de départ), exploration jusqu'aux maisons et châteaux générés, clés et coffres verrouillés, carte au trésor jusqu'au coffre, combat contre les créatures des spawners ; multijoueur à deux joueurs (kit propre à chacun, récompense au vainqueur) ; naviguer au pad ; aperçu fantôme puis construction ; pause/reprise ; studio : préréglages, banc d'essai, export/import de profil ; Image → Construction : photo depuis le PC puis depuis un téléphone, génération, édition, envoi et construction ; serveur dédié avec un joueur non opérateur.
 
 ## Rapport de vérification
 
