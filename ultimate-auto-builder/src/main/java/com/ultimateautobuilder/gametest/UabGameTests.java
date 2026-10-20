@@ -448,7 +448,7 @@ public final class UabGameTests {
     }
 
     /** Variantes du Warden et récompense : clé OP seulement pour une vraie victoire, une seule fois. */
-    @GameTest(template = TEMPLATE, timeoutTicks = 100, batch = "uab_warden")
+    @GameTest(template = TEMPLATE, timeoutTicks = 400, batch = "uab_warden")
     public static void wardenVariantsAndReward(GameTestHelper h) {
         ServerPlayer p = survivalPlayer(h);
         p.getInventory().clearContent();
@@ -467,22 +467,25 @@ public final class UabGameTests {
         var baby = spawned.get(com.ultimateautobuilder.core.adventure.WardenVariant.BABY);
         h.assertTrue(baby.getScale() < normal.getScale() && normal.getScale() < boss.getScale(), "Tailles incohérentes");
         h.assertTrue(boss.getMaxHealth() > normal.getMaxHealth() && baby.getMaxHealth() < normal.getMaxHealth(), "Santé incohérente");
-        // Pendant l'émergence, la boîte du Warden est fixe ; la taille debout reflète la variante.
-        h.assertTrue(baby.getDimensions(net.minecraft.world.entity.Pose.STANDING).height()
-                < normal.getDimensions(net.minecraft.world.entity.Pose.STANDING).height(), "Boîte de collision non réduite");
+        var medium = spawned.get(com.ultimateautobuilder.core.adventure.WardenVariant.MEDIUM);
         // Disparition sans victoire (commande) : aucune clé.
         normal.hurt(h.getLevel().damageSources().genericKill(), 100000F);
         h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 0, "Clé donnée sans victoire");
         // Vraie victoire du joueur : une clé OP, une seule.
-        baby.hurt(h.getLevel().damageSources().playerAttack(p), 100000F);
-        h.assertTrue(!baby.isAlive(), "Le Warden bébé devrait être vaincu");
+        medium.hurt(h.getLevel().damageSources().playerAttack(p), 100000F);
+        h.assertTrue(!medium.isAlive(), "Le Warden moyen devrait être vaincu");
         h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 1, "Clé OP attendue : " + p.getInventory().countItem(ModItems.OP_KEY.get()));
-        com.ultimateautobuilder.adventure.WardenEvents.onDeath(baby, h.getLevel().damageSources().playerAttack(p));
+        com.ultimateautobuilder.adventure.WardenEvents.onDeath(medium, h.getLevel().damageSources().playerAttack(p));
         h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 1, "Récompense donnée deux fois");
-        for (var e : spawned.values()) {
-            e.discard();
-        }
-        h.succeed();
+        // La boîte de collision du Warden est fixe pendant son émergence : comparaison une fois debout.
+        h.succeedWhen(() -> {
+            h.assertTrue(baby.getPose() != net.minecraft.world.entity.Pose.EMERGING && boss.getPose() != net.minecraft.world.entity.Pose.EMERGING,
+                    "Émergence en cours");
+            h.assertTrue(baby.getBbHeight() < 2.0F && boss.getBbHeight() > 3.5F, "Boîtes de collision : bébé " + baby.getBbHeight()
+                    + ", boss " + boss.getBbHeight());
+            baby.discard();
+            boss.discard();
+        });
     }
 
     /** Kit de départ : contenu exact, une seule fois (reconnexion sans doublon). */
