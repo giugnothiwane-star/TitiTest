@@ -241,7 +241,8 @@ public final class StructureSites {
         if (far * 10 > n) {
             return null;
         }
-        if (floor < level.getMinBuildHeight() + 20 || floor + bp.maxY() >= level.getMaxBuildHeight() - 2) {
+        // La partie enterrée (cave, forteresse souterraine) doit rester au-dessus du fond du monde.
+        if (floor + bp.minY() < level.getMinBuildHeight() + 2 || floor + bp.maxY() >= level.getMaxBuildHeight() - 2) {
             return null;
         }
         for (int[] corner : new int[][]{{fp[0], fp[1]}, {fp[2], fp[1]}, {fp[0], fp[3]}, {fp[2], fp[3]}, {0, 0}}) {
