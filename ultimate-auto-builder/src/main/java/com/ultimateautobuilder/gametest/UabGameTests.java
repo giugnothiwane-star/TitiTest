@@ -429,7 +429,9 @@ public final class UabGameTests {
         ServerPlayer p = survivalPlayer(h);
         BlockPos pos = h.absolutePos(CENTER);
         p.moveTo(pos.getX() + 6.5, pos.getY(), pos.getZ() + 6.5);
-        p.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+        // Créatif : compte comme joueur proche (un spectateur n'active pas les spawners) et n'est pas attaqué.
+        p.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+        java.util.Set<java.util.UUID> seen = new java.util.HashSet<>();
         h.getLevel().setBlock(pos, com.ultimateautobuilder.registry.ModBlocks.ADVENTURE_SPAWNER.get().defaultBlockState()
                 .setValue(com.ultimateautobuilder.block.Props.CATEGORY, com.ultimateautobuilder.block.Props.Category.BABY)
                 .setValue(com.ultimateautobuilder.block.Props.FAMILY, com.ultimateautobuilder.block.Props.Family.MIXED), 3);
@@ -438,12 +440,14 @@ public final class UabGameTests {
                     m -> m.getPersistentData().contains(com.ultimateautobuilder.adventure.MobVariants.TAG_VARIANT));
             h.assertTrue(mobs.size() <= 4, "Plus de 4 créatures : " + mobs.size());
             for (var m : mobs) {
+                seen.add(m.getUUID());
                 h.assertTrue("bebe".equals(m.getPersistentData().getString(com.ultimateautobuilder.adventure.MobVariants.TAG_VARIANT)),
                         "Variante inattendue : " + m.getType());
                 boolean baby = m.isBaby() || m.getScale() < 0.6F;
                 h.assertTrue(baby, "Créature adulte dans le spawner bébé : " + m.getType() + " échelle " + m.getScale());
             }
-            h.assertTrue(mobs.size() == 4, "Cycle en cours : " + mobs.size() + " / 4");
+            // Les bébés morts-vivants peuvent brûler au soleil : on compte les créatures apparues dans le cycle.
+            h.assertTrue(seen.size() >= 4, "Cycle en cours : " + seen.size() + " / 4");
         });
     }
 
@@ -457,7 +461,9 @@ public final class UabGameTests {
         java.util.Map<com.ultimateautobuilder.core.adventure.WardenVariant, net.minecraft.world.entity.LivingEntity> spawned = new java.util.EnumMap<>(
                 com.ultimateautobuilder.core.adventure.WardenVariant.class);
         for (var v : com.ultimateautobuilder.core.adventure.WardenVariant.values()) {
-            var e = com.ultimateautobuilder.adventure.MobVariants.spawn(h.getLevel(), pos, com.ultimateautobuilder.core.adventure.SpawnCategory.NORMAL,
+            // Un point d'apparition par Warden : aucune collision entre eux.
+            BlockPos at = pos.offset(-12 + v.ordinal() * 8, 0, -8);
+            var e = com.ultimateautobuilder.adventure.MobVariants.spawn(h.getLevel(), at, com.ultimateautobuilder.core.adventure.SpawnCategory.NORMAL,
                     new com.ultimateautobuilder.core.adventure.SpawnRules.Warden(v));
             h.assertTrue(e != null, "Warden " + v + " non placé");
             spawned.put(v, (net.minecraft.world.entity.LivingEntity) e);
