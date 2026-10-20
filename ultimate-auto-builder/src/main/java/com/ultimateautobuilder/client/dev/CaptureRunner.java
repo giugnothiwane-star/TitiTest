@@ -228,84 +228,99 @@ public final class CaptureRunner {
             }
             case 16 -> {
                 shot(mc, "10_hub_accueil");
-                hub(mc, 4);
+                serverRun(mc, sp -> {
+                    // Ensemble en fer complet porté : la récompense devient disponible dans le cristal.
+                    sp.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_HELMET));
+                    sp.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_CHESTPLATE));
+                    sp.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_LEGGINGS));
+                    sp.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_BOOTS));
+                    net.minecraft.world.item.ItemStack map = new net.minecraft.world.item.ItemStack(com.ultimateautobuilder.registry.ModItems.TREASURE_MAP.get());
+                    net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, map,
+                            c -> c.putString(com.ultimateautobuilder.adventure.Treasures.K_TIER, "rare"));
+                    sp.getInventory().add(map);
+                    sp.getInventory().add(new net.minecraft.world.item.ItemStack(com.ultimateautobuilder.registry.ModItems.UNCOMMON_KEY.get(), 2));
+                    sp.getInventory().add(new net.minecraft.world.item.ItemStack(com.ultimateautobuilder.registry.ModItems.RARE_KEY.get()));
+                    com.ultimateautobuilder.adventure.AdventureState.send(sp);
+                });
+                hub(mc, 1);
             }
             case 17 -> {
-                shot(mc, "11_hub_quetes");
-                hub(mc, 5);
+                shot(mc, "11_hub_recompenses");
+                press(mc, b -> b.getMessage().getString().equals("Récupérer") && b.active);
+                wait = 25;
             }
             case 18 -> {
-                shot(mc, "12_hub_materiaux");
-                hub(mc, 2);
+                shot(mc, "12_recompense_animation");
+                hub(mc, 3);
             }
             case 19 -> {
-                shot(mc, "13_hub_shaders");
-                hub(mc, 1);
-                wait = 150;
+                shot(mc, "13_hub_tresors_cles");
+                hub(mc, 5);
             }
             case 20 -> {
-                shot(mc, "14_hub_maisons");
-                mc.setScreen(new BuilderScreen(null, "sakura"));
-                wait = 60;
-            }
-            case 21, 23, 25, 27 -> {
-                String id = SAKURA_SHOTS[(step - 22) / 2];
-                if (mc.screen instanceof BuilderScreen s) {
-                    s.captureSelect(id);
-                }
-                wait = 300;
-            }
-            case 22, 24, 26, 28 -> {
-                shot(mc, String.format("%02d_sakura_%s", 15 + (step - 23) / 2, SAKURA_SHOTS[(step - 23) / 2].substring(7)));
-                wait = 10;
-            }
-            case 29 -> {
-                // Parcours réel de déblocage : quêtes validées et matériaux fournis côté serveur, puis clics dans l'interface.
-                prepareUnlock(mc);
-                mc.setScreen(new BuilderScreen(null, "sakura"));
-                wait = 100;
-            }
-            case 30 -> {
-                if (mc.screen instanceof BuilderScreen s) {
-                    s.captureSelect("sakura_minka_tradition");
-                }
-                wait = 200;
-            }
-            case 31 -> {
-                shot(mc, "19_deblocage_disponible");
-                press(mc, b -> b.getMessage().getString().contains("Débloquer"));
-                wait = 40;
-            }
-            case 32 -> {
-                shot(mc, "20_deblocage_confirmation");
-                press(mc, b -> b.getMessage().equals(net.minecraft.network.chat.CommonComponents.GUI_YES));
-                wait = 120;
-            }
-            case 33 -> {
-                shot(mc, "21_deblocage_effectue");
-                wait = 10;
-            }
-            case 34 -> {
-                // Maison Sakura de départ construite dans le monde, cristal en main.
+                shot(mc, "14_hub_shaders");
                 mc.setScreen(null);
-                selectCrystal(mc);
-                mc.player.setYRot(mc.player.getYRot() + 90f);
-                PlacementController.SETTINGS.entry = DefaultCatalog.shared().get("sakura_petite_maison");
-                PlacementController.start();
-                mc.player.setXRot(15f);
-                wait = 300;
-            }
-            case 35 -> {
-                PlacementController.requestBuild(mc, null);
+                // Château abandonné posé par le vrai placeur à 40 blocs devant le joueur.
+                serverRun(mc, sp -> placeNear(sp, com.ultimateautobuilder.core.adventure.StructureType.ABANDONED_CASTLE, 40));
                 wait = 500;
             }
-            case 36 -> {
-                PlacementController.stop();
-                stepBack(mc, 14, 3);
-                wait = 80;
+            case 21 -> {
+                serverRun(mc, sp -> viewSite(sp, "capture:castle", 0, 30, 8, 20f));
+                wait = 120;
             }
-            case 37 -> {
-                shot(mc, "22_sakura_construite");
+            case 22 -> {
+                shot(mc, "15_chateau_abandonne");
+                // Dans la cour, face au donjon et à la salle des spawners.
+                serverRun(mc, sp -> viewSite(sp, "capture:castle", 0, 8, 2, 10f));
+                wait = 300;
+            }
+            case 23 -> {
+                shot(mc, "16_chateau_cour_spawners");
+                // Un Boss Warden forcé (la probabilité réelle est de 0,5 % × 2/72) pour vérifier variante et barre de boss.
+                serverRun(mc, sp -> forceBoss(sp));
+                wait = 200;
+            }
+            case 24 -> {
+                shot(mc, "17_boss_warden");
+                serverRun(mc, sp -> {
+                    for (var e : sp.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.warden.Warden.class, sp.getBoundingBox().inflate(64))) {
+                        e.discard();
+                    }
+                    sp.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
+                    placeNear(sp, com.ultimateautobuilder.core.adventure.StructureType.LEGENDARY_HOUSE, -30);
+                });
+                wait = 300;
+            }
+            case 25 -> {
+                serverRun(mc, sp -> viewSite(sp, "capture:legendary_house", 0, 18, 6, 15f));
+                wait = 120;
+            }
+            case 26 -> {
+                shot(mc, "18_maison_legendaire");
+                serverRun(mc, sp -> openLockedChestTest(sp));
+                wait = 60;
+            }
+            case 27 -> {
+                shot(mc, "19_coffre_verrouille_ouvert");
+                mc.setScreen(null);
+                selectItem(mc, com.ultimateautobuilder.registry.ModItems.TREASURE_MAP.get());
+                wait = 40;
+            }
+            case 28 -> {
+                if (mc.player != null) {
+                    com.ultimateautobuilder.client.ClientHooks.openTreasureMap(mc.player.getMainHandItem());
+                }
+                wait = 40;
+            }
+            case 29 -> {
+                shot(mc, "20_carte_tresor");
+                mc.setScreen(null);
+                serverRun(mc, sp -> viewStarterHouse(sp));
+                wait = 120;
+            }
+            case 30 -> {
+                selectCrystal(mc);
+                shot(mc, "21_maison_depart_cristal");
                 wait = 10;
             }
             default -> {
@@ -314,8 +329,6 @@ public final class CaptureRunner {
             }
         }
     }
-
-    private static final String[] SAKURA_SHOTS = {"sakura_petite_maison", "sakura_minka_tradition", "sakura_villa_moderne", "sakura_ryokan"};
 
     private static void hub(Minecraft mc, int section) {
         if (mc.screen instanceof HubScreen h) {
@@ -364,50 +377,111 @@ public final class CaptureRunner {
         UltimateAutoBuilderMod.LOGGER.warn("Capture : bouton introuvable sur {}", mc.screen.getClass().getSimpleName());
     }
 
-    /**
-     * Fait atteindre le niveau « pierre » par le chemin normal (statistique de minage réelle,
-     * réclamation des quêtes) et donne le coût exact de la minka : 16 bûches de cerisier, 32 pierres.
-     */
-    private static void prepareUnlock(Minecraft mc) {
+    /** Exécute une action sur le joueur côté serveur intégré (outil de vérification uniquement). */
+    private static void serverRun(Minecraft mc, java.util.function.Consumer<net.minecraft.server.level.ServerPlayer> action) {
         var server = mc.getSingleplayerServer();
-        if (server == null) {
+        if (server == null || mc.player == null) {
+            UltimateAutoBuilderMod.LOGGER.warn("Capture : pas de serveur intégré");
             return;
         }
         java.util.UUID id = mc.player.getUUID();
-        server.execute(() -> {
-            var sp = server.getPlayerList().getPlayer(id);
-            if (sp == null) {
-                return;
-            }
-            sp.awardStat(net.minecraft.stats.Stats.BLOCK_MINED.get(net.minecraft.world.level.block.Blocks.STONE), 64);
-            com.ultimateautobuilder.progression.ProgressManager.markOpened(sp, false);
-            com.ultimateautobuilder.progression.ProgressManager.markOpened(sp, true);
-            for (String q : new String[]{"decouverte", "catalogue", "premiere_maison", "pierre"}) {
-                var r = com.ultimateautobuilder.progression.ProgressManager.claim(sp, q);
-                UltimateAutoBuilderMod.LOGGER.info("Capture : quête {} → {} ({})", q, r.status(), r.message());
-            }
-            sp.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHERRY_LOG, 16));
-            sp.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 32));
-            com.ultimateautobuilder.progression.ProgressManager.send(sp);
-        });
-    }
-
-    /** Recule le joueur (téléportation serveur) pour cadrer toute la construction. */
-    private static void stepBack(Minecraft mc, double back, double up) {
-        var server = mc.getSingleplayerServer();
-        if (server == null) {
-            return;
-        }
-        java.util.UUID id = mc.player.getUUID();
-        float yaw = mc.player.getYRot();
         server.execute(() -> {
             var sp = server.getPlayerList().getPlayer(id);
             if (sp != null) {
-                double rad = Math.toRadians(yaw);
-                double dx = Math.sin(rad) * back, dz = -Math.cos(rad) * back;
-                sp.connection.teleport(sp.getX() + dx, sp.getY() + up, sp.getZ() + dz, yaw, 20f);
+                try {
+                    action.accept(sp);
+                } catch (RuntimeException e) {
+                    UltimateAutoBuilderMod.LOGGER.error("Capture : action serveur en échec", e);
+                }
             }
         });
+    }
+
+    /** Pose une structure avec le placeur réel, à {@code dist} blocs devant (ou derrière) le joueur. */
+    private static void placeNear(net.minecraft.server.level.ServerPlayer sp, com.ultimateautobuilder.core.adventure.StructureType type, int dist) {
+        var level = sp.serverLevel();
+        double yaw = Math.toRadians(sp.getYRot());
+        int x = (int) Math.floor(sp.getX() - Math.sin(yaw) * dist), z = (int) Math.floor(sp.getZ() + Math.cos(yaw) * dist);
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1;
+        var bp = com.ultimateautobuilder.core.adventure.AdventureGen.build(type, 1234L);
+        var data = com.ultimateautobuilder.adventure.AdventureData.get(sp.server);
+        String key = "capture:" + (type == com.ultimateautobuilder.core.adventure.StructureType.ABANDONED_CASTLE ? "castle" : "legendary_house");
+        var site = data.addSite(key);
+        site.type = type;
+        site.x = x;
+        site.y = y;
+        site.z = z;
+        site.state = com.ultimateautobuilder.adventure.AdventureData.SiteState.PLACING;
+        UltimateAutoBuilderMod.LOGGER.info("Capture : pose de {} en {} {} {}", type.label, x, y, z);
+        com.ultimateautobuilder.adventure.StructurePlacer.enqueue(level, bp, x, y, z, 0, box -> {
+            data.markPlaced(site, box);
+            UltimateAutoBuilderMod.LOGGER.info("Capture : {} posé ({})", type.label, java.util.Arrays.toString(box));
+        });
+    }
+
+    /** Place le joueur devant l'entrée d'un site (façade +Z), à {@code back} blocs, regard vers la structure. */
+    private static void viewSite(net.minecraft.server.level.ServerPlayer sp, String key, int dx, int back, int up, float pitch) {
+        var s = com.ultimateautobuilder.adventure.AdventureData.get(sp.server).site(key);
+        if (s == null) {
+            UltimateAutoBuilderMod.LOGGER.warn("Capture : site {} absent", key);
+            return;
+        }
+        int[] box = s.box;
+        double cx = box == null ? s.x : (box[0] + box[3]) / 2.0 + 0.5;
+        double front = box == null ? s.z : box[5];
+        sp.connection.teleport(cx + dx, s.y + up, front + back, 180f, pitch);
+    }
+
+    /** Boss Warden forcé au centre de la cour du château posé, via le vrai code de variantes. */
+    private static void forceBoss(net.minecraft.server.level.ServerPlayer sp) {
+        var s = com.ultimateautobuilder.adventure.AdventureData.get(sp.server).site("capture:castle");
+        if (s == null || s.box == null) {
+            return;
+        }
+        var pos = new net.minecraft.core.BlockPos((s.box[0] + s.box[3]) / 2, s.y + 1, (s.box[2] + s.box[5]) / 2 + 6);
+        var e = com.ultimateautobuilder.adventure.MobVariants.spawn(sp.serverLevel(), pos, com.ultimateautobuilder.core.adventure.SpawnCategory.NORMAL,
+                new com.ultimateautobuilder.core.adventure.SpawnRules.Warden(com.ultimateautobuilder.core.adventure.WardenVariant.BOSS));
+        UltimateAutoBuilderMod.LOGGER.info("Capture : Boss Warden {}", e == null ? "non placé (pas de place)" : "apparu, échelle "
+                + ((net.minecraft.world.entity.LivingEntity) e).getScale() + ", santé " + ((net.minecraft.world.entity.LivingEntity) e).getMaxHealth());
+    }
+
+    /** Coffre verrouillé rare posé devant le joueur, ouvert avec une clé rare : vrai chemin serveur. */
+    private static void openLockedChestTest(net.minecraft.server.level.ServerPlayer sp) {
+        var level = sp.serverLevel();
+        var pos = sp.blockPosition().relative(sp.getDirection(), 2);
+        var state = com.ultimateautobuilder.registry.ModBlocks.LOCKED_CHEST.get().defaultBlockState()
+                .setValue(com.ultimateautobuilder.block.Props.TIER, com.ultimateautobuilder.block.Props.Tier.RARE);
+        level.setBlock(pos, state, 3);
+        var key = new net.minecraft.world.item.ItemStack(com.ultimateautobuilder.registry.ModItems.RARE_KEY.get());
+        sp.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, key);
+        com.ultimateautobuilder.adventure.Locks.openChest(level, pos, state, sp, net.minecraft.world.InteractionHand.MAIN_HAND, key);
+        UltimateAutoBuilderMod.LOGGER.info("Capture : coffre verrouillé → {}", level.getBlockState(pos));
+    }
+
+    /** Vue de la maison de départ du joueur si elle a été construite. */
+    private static void viewStarterHouse(net.minecraft.server.level.ServerPlayer sp) {
+        var s = com.ultimateautobuilder.adventure.AdventureData.get(sp.server).site("start:" + sp.getUUID());
+        if (s == null || s.box == null) {
+            UltimateAutoBuilderMod.LOGGER.warn("Capture : maison de départ absente (joueur existant ou aucun emplacement)");
+            return;
+        }
+        double cx = (s.box[0] + s.box[3]) / 2.0, cz = (s.box[2] + s.box[5]) / 2.0;
+        // Recul de 14 blocs dans la direction de la façade (+Z du plan, tourné comme la maison).
+        long v = com.ultimateautobuilder.core.placement.Placement.rotateXZ(0, 14, s.rotation, false);
+        double px = cx + (int) (v >> 32), pz = cz + (int) v;
+        float look = (float) Math.toDegrees(Math.atan2(-(cx - px), cz - pz));
+        sp.connection.teleport(px, s.y + 3, pz, look, 12f);
+        UltimateAutoBuilderMod.LOGGER.info("Capture : maison de départ en {}", java.util.Arrays.toString(s.box));
+    }
+
+    private static void selectItem(Minecraft mc, net.minecraft.world.item.Item item) {
+        var inv = mc.player.getInventory();
+        for (int i = 0; i < 9; i++) {
+            if (inv.getItem(i).is(item)) {
+                inv.selected = i;
+                return;
+            }
+        }
     }
 
     /** Met l'Ultimate Crystal (donné à la première connexion) dans la main du joueur. */

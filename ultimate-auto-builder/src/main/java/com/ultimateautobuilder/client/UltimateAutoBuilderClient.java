@@ -40,10 +40,13 @@ public final class UltimateAutoBuilderClient {
         modBus.addListener((RegisterKeyMappingsEvent e) -> KeyBindings.register(e));
         NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> ClientTicker.onClientTick());
         NeoForge.EVENT_BUS.addListener((RenderLevelStageEvent e) -> PreviewRenderer.onRenderLevel(e));
-        NeoForge.EVENT_BUS.addListener((RenderGuiEvent.Post e) -> ProgressHud.render(e.getGuiGraphics()));
+        NeoForge.EVENT_BUS.addListener((RenderGuiEvent.Post e) -> {
+            ProgressHud.render(e.getGuiGraphics());
+            ClientAdventure.renderFx(e.getGuiGraphics(), e.getGuiGraphics().guiWidth());
+        });
         NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> {
             ClientState.reset();
-            ClientProgress.reset();
+            ClientAdventure.reset();
             PlacementController.stop();
             PreviewRenderer.reset();
             FrameStats.cancelBenchmark();

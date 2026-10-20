@@ -14,7 +14,18 @@ public final class ModCreativeTabs {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = TABS.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.ultimateautobuilder"))
             .icon(() -> new ItemStack(ModItems.ULTIMATE_CRYSTAL.get()))
-            .displayItems((params, output) -> output.accept(ModItems.ULTIMATE_CRYSTAL.get()))
+            .displayItems((params, output) -> {
+                output.accept(ModItems.ULTIMATE_CRYSTAL.get());
+                output.accept(ModItems.COMMON_KEY.get());
+                output.accept(ModItems.UNCOMMON_KEY.get());
+                output.accept(ModItems.RARE_KEY.get());
+                output.accept(ModItems.LEGENDARY_KEY.get());
+                output.accept(ModItems.OP_KEY.get());
+                output.accept(ModItems.TREASURE_MAP.get());
+                output.accept(ModItems.LOCKED_CHEST.get());
+                output.accept(ModItems.VAULT_DOOR.get());
+                output.accept(ModItems.ADVENTURE_SPAWNER.get());
+            })
             .build());
 
     private ModCreativeTabs() {

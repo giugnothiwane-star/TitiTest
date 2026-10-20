@@ -10,10 +10,6 @@ import com.ultimateautobuilder.core.generator.Japanese.RoofStyle;
 import com.ultimateautobuilder.core.generator.RoofMat;
 import com.ultimateautobuilder.core.model.VoxelGrid;
 import com.ultimateautobuilder.core.model.VoxelModel;
-import com.ultimateautobuilder.core.progression.ItemCost;
-import com.ultimateautobuilder.core.progression.ProgressionRules;
-import com.ultimateautobuilder.core.progression.Tier;
-import com.ultimateautobuilder.core.progression.UnlockRule;
 import com.ultimateautobuilder.core.util.Rng;
 
 import java.util.List;
@@ -459,27 +455,5 @@ public final class SakuraModels {
             Japanese.stoneLantern(g, s.cx() - 3, 1, h.z1() + 7);
             Japanese.stoneLantern(g, s.cx() + 3, 1, h.z1() + 7);
         }), "sakura", "terrasse", "surelevee", "rose", "maison");
-        registerRules();
-    }
-
-    /** Coûts thématiques : bois de cerisier pour la collection, prestige en netherite. */
-    private static void registerRules() {
-        UnlockRule pierre = new UnlockRule(Tier.PIERRE, List.of(new ItemCost("minecraft:cherry_log", 16), new ItemCost("minecraft:cobblestone", 32)));
-        UnlockRule fer = new UnlockRule(Tier.FER, List.of(new ItemCost("minecraft:cherry_log", 24), new ItemCost("minecraft:iron_ingot", 8),
-                new ItemCost("minecraft:lantern", 4)));
-        UnlockRule diamant = new UnlockRule(Tier.DIAMANT, List.of(new ItemCost("minecraft:cherry_log", 32), new ItemCost("minecraft:diamond", 3)));
-        UnlockRule netherite = new UnlockRule(Tier.NETHERITE, List.of(new ItemCost("minecraft:netherite_ingot", 1), new ItemCost("minecraft:diamond", 8),
-                new ItemCost("minecraft:cherry_log", 48)));
-        for (String id : List.of("sakura_minka_tradition", "sakura_rose_blanche", "sakura_jardin_bois", "sakura_terrasse_vue", "sakura_allee_lanternes",
-                "sakura_entree_torii", "sakura_campagne", "sakura_jardin_pierres", "sakura_serre")) {
-            ProgressionRules.override(id, pierre);
-        }
-        for (String id : List.of("sakura_villa_moderne", "sakura_bassin_pont", "sakura_balcon_bois", "sakura_niveaux", "sakura_terrasse_surelevee")) {
-            ProgressionRules.override(id, fer);
-        }
-        for (String id : List.of("sakura_cour_interieure", "sakura_foret", "sakura_ryokan")) {
-            ProgressionRules.override(id, diamant);
-        }
-        ProgressionRules.override("sakura_luxe", netherite);
     }
 }

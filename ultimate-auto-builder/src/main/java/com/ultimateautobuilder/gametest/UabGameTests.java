@@ -14,12 +14,6 @@ import com.ultimateautobuilder.core.catalog.models.DefaultCatalog;
 import com.ultimateautobuilder.core.model.B;
 import com.ultimateautobuilder.core.model.VoxelModel;
 import com.ultimateautobuilder.config.ServerConfig;
-import com.ultimateautobuilder.core.progression.ItemCost;
-import com.ultimateautobuilder.core.progression.PlayerProgress;
-import com.ultimateautobuilder.core.progression.ProgressionRules;
-import com.ultimateautobuilder.core.progression.Tier;
-import com.ultimateautobuilder.core.progression.UnlockRule;
-import com.ultimateautobuilder.progression.ProgressManager;
 import com.ultimateautobuilder.registry.ModCreativeTabs;
 import com.ultimateautobuilder.registry.ModItems;
 import net.minecraft.core.BlockPos;
@@ -333,8 +327,8 @@ public final class UabGameTests {
     }
 
     /**
-     * Cristal unique : l'Ultimate Crystal est enregistré, fabricable, seul objet de l'onglet créatif ;
-     * les anciens cristaux restent enregistrés (mondes existants) et convertibles.
+     * Cristal unique et objets d'aventure : identifiants stables, recettes chargées, onglet créatif
+     * (cristal, clés, carte, blocs d'aventure) ; les anciens cristaux restent enregistrés.
      */
     @GameTest(template = TEMPLATE, timeoutTicks = 20, batch = "uab_item")
     public static void crystalRegistered(GameTestHelper h) {
@@ -349,8 +343,205 @@ public final class UabGameTests {
         CreativeModeTab tab = ModCreativeTabs.MAIN.get();
         tab.buildContents(new CreativeModeTab.ItemDisplayParameters(h.getLevel().enabledFeatures(), false, h.getLevel().registryAccess()));
         List<String> items = tab.getDisplayItems().stream().map(s -> BuiltInRegistries.ITEM.getKey(s.getItem()).toString()).toList();
-        h.assertTrue(items.equals(List.of("ultimateautobuilder:ultimate_crystal")), "Onglet créatif inattendu : " + items);
+        h.assertTrue(items.size() == 10 && items.get(0).equals("ultimateautobuilder:ultimate_crystal") && items.contains("ultimateautobuilder:op_key")
+                && !items.contains("ultimateautobuilder:ice_crystal"), "Onglet créatif inattendu : " + items);
         h.succeed();
+    }
+
+    private static ServerPlayer survivalPlayer(GameTestHelper h) {
+        ServerPlayer p = h.makeMockServerPlayerInLevel();
+        p.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        // Aucune maison de départ dans le monde de test.
+        var data = com.ultimateautobuilder.adventure.AdventureData.get(h.getLevel().getServer());
+        data.player(p.getUUID()).starterHouseDone = true;
+        return p;
+    }
+
+    /**
+     * Tables de butin : chaque table du mod se tire réellement ; les enchantements sont compatibles
+     * avec leur objet ; ni diamant ni Netherite dans les coffres communs et peu communs ; pas de
+     * lingot de Netherite dans les coffres légendaires ordinaires.
+     */
+    @GameTest(template = TEMPLATE, timeoutTicks = 40, batch = "uab_loot")
+    public static void lootTablesAreBalanced(GameTestHelper h) {
+        ServerPlayer p = survivalPlayer(h);
+        String[] tables = {"chests/common", "chests/uncommon", "chests/rare", "chests/legendary", "chests/op", "chests/locked_common",
+                "chests/locked_uncommon", "chests/locked_rare", "chests/locked_legendary", "chests/locked_op", "chests/treasure_common",
+                "chests/treasure_uncommon", "chests/treasure_rare", "chests/treasure_legendary", "entities/boss_warden"};
+        int maxEff = 0;
+        for (String t : tables) {
+            int total = 0;
+            for (int i = 0; i < 60; i++) {
+                for (ItemStack st : com.ultimateautobuilder.adventure.Rewards.roll(p, t)) {
+                    total++;
+                    String id = BuiltInRegistries.ITEM.getKey(st.getItem()).toString();
+                    if (t.equals("chests/common") || t.equals("chests/uncommon")) {
+                        h.assertFalse(id.contains("diamond") || id.contains("netherite"), t + " contient " + id);
+                    }
+                    if (t.equals("chests/legendary")) {
+                        h.assertFalse(id.equals("minecraft:netherite_ingot") || id.startsWith("minecraft:netherite_"), t + " contient " + id);
+                    }
+                    for (var e : st.getEnchantments().entrySet()) {
+                        h.assertTrue(e.getKey().value().canEnchant(st), t + " : enchantement incompatible sur " + id);
+                        if (e.getKey().is(net.minecraft.world.item.enchantment.Enchantments.EFFICIENCY)) {
+                            maxEff = Math.max(maxEff, e.getIntValue());
+                        }
+                    }
+                }
+            }
+            h.assertTrue(total > 0, "Table vide ou absente : " + t);
+        }
+        h.assertTrue(maxEff >= 25, "Efficacité XXV/XXX attendue dans les récompenses OP : " + maxEff);
+        h.succeed();
+    }
+
+    /** Clés : une mauvaise clé n'est pas consommée ; la bonne ouvre le coffre une seule fois. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 40, batch = "uab_keys")
+    public static void keysOpenOnlyMatchingLocks(GameTestHelper h) {
+        ServerPlayer p = survivalPlayer(h);
+        BlockPos pos = h.absolutePos(CENTER);
+        BlockState locked = com.ultimateautobuilder.registry.ModBlocks.LOCKED_CHEST.get().defaultBlockState()
+                .setValue(com.ultimateautobuilder.block.Props.TIER, com.ultimateautobuilder.block.Props.Tier.RARE);
+        h.getLevel().setBlock(pos, locked, 3);
+        ItemStack wrong = new ItemStack(ModItems.COMMON_KEY.get(), 3);
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, wrong);
+        com.ultimateautobuilder.adventure.Locks.openChest(h.getLevel(), pos, locked, p, net.minecraft.world.InteractionHand.MAIN_HAND, wrong);
+        h.assertTrue(h.getLevel().getBlockState(pos).is(com.ultimateautobuilder.registry.ModBlocks.LOCKED_CHEST.get()), "Ouvert avec la mauvaise clé");
+        h.assertTrue(wrong.getCount() == 3, "Mauvaise clé consommée");
+        ItemStack right = new ItemStack(ModItems.RARE_KEY.get(), 2);
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, right);
+        com.ultimateautobuilder.adventure.Locks.openChest(h.getLevel(), pos, locked, p, net.minecraft.world.InteractionHand.MAIN_HAND, right);
+        h.assertTrue(h.getLevel().getBlockState(pos).is(Blocks.CHEST), "Le coffre ne s'est pas ouvert");
+        h.assertTrue(right.getCount() == 1, "Clé non consommée ou consommée deux fois : " + right.getCount());
+        h.assertTrue(h.getLevel().getBlockEntity(pos) instanceof net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity be
+                && be.getLootTable() != null, "Table de butin absente");
+        // Second clic : le coffre est ordinaire, plus rien n'est consommé.
+        com.ultimateautobuilder.adventure.Locks.openChest(h.getLevel(), pos, h.getLevel().getBlockState(pos), p,
+                net.minecraft.world.InteractionHand.MAIN_HAND, right);
+        h.assertTrue(right.getCount() == 1, "Double consommation");
+        h.succeed();
+    }
+
+    /** Spawner « bébé » : uniquement des bébés, jamais plus de 4 créatures par cycle. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 900, batch = "uab_spawner")
+    public static void babySpawnerProducesOnlyBabies(GameTestHelper h) {
+        ServerPlayer p = survivalPlayer(h);
+        BlockPos pos = h.absolutePos(CENTER);
+        p.moveTo(pos.getX() + 6.5, pos.getY(), pos.getZ() + 6.5);
+        p.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+        h.getLevel().setBlock(pos, com.ultimateautobuilder.registry.ModBlocks.ADVENTURE_SPAWNER.get().defaultBlockState()
+                .setValue(com.ultimateautobuilder.block.Props.CATEGORY, com.ultimateautobuilder.block.Props.Category.BABY)
+                .setValue(com.ultimateautobuilder.block.Props.FAMILY, com.ultimateautobuilder.block.Props.Family.MIXED), 3);
+        h.succeedWhen(() -> {
+            var mobs = h.getLevel().getEntitiesOfClass(net.minecraft.world.entity.Mob.class, new net.minecraft.world.phys.AABB(pos).inflate(8),
+                    m -> m.getPersistentData().contains(com.ultimateautobuilder.adventure.MobVariants.TAG_VARIANT));
+            h.assertTrue(mobs.size() <= 4, "Plus de 4 créatures : " + mobs.size());
+            for (var m : mobs) {
+                h.assertTrue("bebe".equals(m.getPersistentData().getString(com.ultimateautobuilder.adventure.MobVariants.TAG_VARIANT)),
+                        "Variante inattendue : " + m.getType());
+                boolean baby = m.isBaby() || m.getScale() < 0.6F;
+                h.assertTrue(baby, "Créature adulte dans le spawner bébé : " + m.getType() + " échelle " + m.getScale());
+            }
+            h.assertTrue(mobs.size() == 4, "Cycle en cours : " + mobs.size() + " / 4");
+        });
+    }
+
+    /** Variantes du Warden et récompense : clé OP seulement pour une vraie victoire, une seule fois. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 100, batch = "uab_warden")
+    public static void wardenVariantsAndReward(GameTestHelper h) {
+        ServerPlayer p = survivalPlayer(h);
+        p.getInventory().clearContent();
+        BlockPos pos = h.absolutePos(CENTER);
+        p.moveTo(pos.getX() + 10.5, pos.getY(), pos.getZ() + 10.5);
+        java.util.Map<com.ultimateautobuilder.core.adventure.WardenVariant, net.minecraft.world.entity.LivingEntity> spawned = new java.util.EnumMap<>(
+                com.ultimateautobuilder.core.adventure.WardenVariant.class);
+        for (var v : com.ultimateautobuilder.core.adventure.WardenVariant.values()) {
+            var e = com.ultimateautobuilder.adventure.MobVariants.spawn(h.getLevel(), pos, com.ultimateautobuilder.core.adventure.SpawnCategory.NORMAL,
+                    new com.ultimateautobuilder.core.adventure.SpawnRules.Warden(v));
+            h.assertTrue(e != null, "Warden " + v + " non placé");
+            spawned.put(v, (net.minecraft.world.entity.LivingEntity) e);
+        }
+        var boss = spawned.get(com.ultimateautobuilder.core.adventure.WardenVariant.BOSS);
+        var normal = spawned.get(com.ultimateautobuilder.core.adventure.WardenVariant.NORMAL);
+        var baby = spawned.get(com.ultimateautobuilder.core.adventure.WardenVariant.BABY);
+        h.assertTrue(baby.getScale() < normal.getScale() && normal.getScale() < boss.getScale(), "Tailles incohérentes");
+        h.assertTrue(boss.getMaxHealth() > normal.getMaxHealth() && baby.getMaxHealth() < normal.getMaxHealth(), "Santé incohérente");
+        h.assertTrue(baby.getBbHeight() < normal.getBbHeight(), "Boîte de collision non réduite");
+        // Disparition sans victoire (commande) : aucune clé.
+        normal.hurt(h.getLevel().damageSources().genericKill(), 100000F);
+        h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 0, "Clé donnée sans victoire");
+        // Vraie victoire du joueur : une clé OP, une seule.
+        baby.hurt(h.getLevel().damageSources().playerAttack(p), 100000F);
+        h.assertTrue(!baby.isAlive(), "Le Warden bébé devrait être vaincu");
+        h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 1, "Clé OP attendue : " + p.getInventory().countItem(ModItems.OP_KEY.get()));
+        com.ultimateautobuilder.adventure.WardenEvents.onDeath(baby, h.getLevel().damageSources().playerAttack(p));
+        h.assertTrue(p.getInventory().countItem(ModItems.OP_KEY.get()) == 1, "Récompense donnée deux fois");
+        for (var e : spawned.values()) {
+            e.discard();
+        }
+        h.succeed();
+    }
+
+    /** Kit de départ : contenu exact, une seule fois (reconnexion sans doublon). */
+    @GameTest(template = TEMPLATE, timeoutTicks = 20, batch = "uab_kit")
+    public static void starterKitGivenOnce(GameTestHelper h) {
+        ServerPlayer p = survivalPlayer(h);
+        p.getInventory().clearContent();
+        var data = com.ultimateautobuilder.adventure.AdventureData.get(h.getLevel().getServer());
+        data.player(p.getUUID()).kitGiven = false;
+        com.ultimateautobuilder.adventure.StarterKit.onLogin(p);
+        var inv = p.getInventory();
+        h.assertTrue(inv.countItem(net.minecraft.world.item.Items.WOODEN_PICKAXE) == 1 && inv.countItem(net.minecraft.world.item.Items.WOODEN_AXE) == 1
+                && inv.countItem(net.minecraft.world.item.Items.WOODEN_SWORD) == 1, "Outils en bois manquants");
+        h.assertTrue(inv.countItem(net.minecraft.world.item.Items.OAK_LOG) == 32 && inv.countItem(net.minecraft.world.item.Items.STONE) == 32,
+                "32 bois et 32 pierres attendus");
+        h.assertTrue(inv.countItem(net.minecraft.world.item.Items.CRAFTING_TABLE) == 1 && inv.countItem(ModItems.ULTIMATE_CRYSTAL.get()) == 1,
+                "Établi et cristal attendus");
+        h.assertTrue(inv.countItem(net.minecraft.world.item.Items.DIAMOND) == 0, "Aucun objet OP au départ");
+        com.ultimateautobuilder.adventure.StarterKit.onLogin(p);
+        h.assertTrue(inv.countItem(net.minecraft.world.item.Items.OAK_LOG) == 32, "Kit donné deux fois");
+        h.succeed();
+    }
+
+    /** Ensemble en fer porté : 8 diamants et 16 émeraudes, une seule fois. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 20, batch = "uab_armor")
+    public static void armorSetRewardOnce(GameTestHelper h) {
+        ServerPlayer p = survivalPlayer(h);
+        p.getInventory().clearContent();
+        com.ultimateautobuilder.adventure.ArmorRewards.claim(p, "iron");
+        h.assertTrue(p.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND) == 0, "Récompense sans l'ensemble complet");
+        p.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(net.minecraft.world.item.Items.IRON_HELMET));
+        p.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(net.minecraft.world.item.Items.IRON_CHESTPLATE));
+        p.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new ItemStack(net.minecraft.world.item.Items.IRON_LEGGINGS));
+        com.ultimateautobuilder.adventure.ArmorRewards.claim(p, "iron");
+        h.assertTrue(p.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND) == 0, "Récompense avec trois pièces seulement");
+        p.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(net.minecraft.world.item.Items.IRON_BOOTS));
+        com.ultimateautobuilder.adventure.ArmorRewards.claim(p, "iron");
+        h.assertTrue(p.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND) == 8
+                && p.getInventory().countItem(net.minecraft.world.item.Items.EMERALD) == 16, "8 diamants et 16 émeraudes attendus");
+        com.ultimateautobuilder.adventure.ArmorRewards.claim(p, "iron");
+        h.assertTrue(p.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND) == 8, "Récompense donnée deux fois");
+        h.succeed();
+    }
+
+    /** Placeur d'aventure : maison posée, coffre marqué rempli par sa table de butin, porte présente. */
+    @GameTest(template = TEMPLATE, timeoutTicks = 600, batch = "uab_placer")
+    public static void adventureHousePlaced(GameTestHelper h) {
+        var bp = com.ultimateautobuilder.core.adventure.AdventureGen.build(com.ultimateautobuilder.core.adventure.StructureType.CELLAR_HOUSE, 42L);
+        BlockPos o = h.absolutePos(new BlockPos(18, 0, 18));
+        int[][] box = new int[1][];
+        com.ultimateautobuilder.adventure.StructurePlacer.enqueue(h.getLevel(), bp, o.getX(), o.getY(), o.getZ(), 0, b -> box[0] = b);
+        h.succeedWhen(() -> {
+            h.assertTrue(box[0] != null, "Pose en cours");
+            for (var mk : bp.markers()) {
+                BlockPos c = o.offset(mk.x(), mk.y(), mk.z());
+                h.assertTrue(h.getLevel().getBlockEntity(c) instanceof net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity be
+                        && be.getLootTable() != null, "Coffre sans butin en " + c);
+            }
+            int[] e = bp.entrance();
+            BlockPos door = o.offset(e[0], 1, e[2] - 3);
+            h.assertTrue(h.getLevel().getBlockState(door).getBlock() instanceof net.minecraft.world.level.block.DoorBlock, "Porte absente en " + door);
+        });
     }
 
     /** Une maison de la collection Sakura se construit entièrement dans un vrai monde. */
@@ -365,85 +556,6 @@ public final class UabGameTests {
             int placed = countNonAir(h.getLevel(), job.bounds());
             h.assertTrue(placed >= job.total() * 9 / 10, "Blocs posés : " + placed + " / " + job.total());
         });
-    }
-
-    /**
-     * Progression avec un vrai joueur serveur : construction verrouillée refusée, quêtes validées
-     * sur les statistiques réelles, matériaux retirés une seule fois, état relu depuis le disque.
-     */
-    @GameTest(template = TEMPLATE, timeoutTicks = 40, batch = "uab_progress")
-    public static void progressionUnlocksWithRealInventory(GameTestHelper h) {
-        ServerPlayer player = h.makeMockServerPlayerInLevel();
-        ServerConfig.ProgressionMode before = ServerConfig.PROGRESSION_MODE.get();
-        // Le joueur factice est en créatif : la progression est forcée pour ce test.
-        ServerConfig.PROGRESSION_MODE.set(ServerConfig.ProgressionMode.ALWAYS);
-        try {
-            ProgressManager.forget(player.getUUID());
-            ModelEntry locked = null;
-            for (ModelEntry e : DefaultCatalog.shared().all()) {
-                if (ProgressionRules.rule(e).tier() == Tier.PIERRE && !ProgressionRules.rule(e).cost().isEmpty()) {
-                    locked = e;
-                    break;
-                }
-            }
-            h.assertTrue(locked != null, "Aucune construction de niveau pierre");
-            UnlockRule rule = ProgressionRules.rule(locked);
-            h.assertFalse(ProgressManager.canBuild(player, locked), "Construction verrouillée acceptée");
-            String refused = null;
-            try {
-                BuildManager.get().submit(player, h.getLevel(), request(h, locked.id(), SizePreset.SMALL, 0, 0, BuildMode.NORMAL));
-            } catch (IllegalStateException ex) {
-                refused = ex.getMessage();
-            }
-            h.assertTrue(refused != null && refused.contains("verrouillée"), "Le serveur doit refuser une construction verrouillée : " + refused);
-            h.assertTrue(ProgressManager.unlock(player, locked.id()).status() == PlayerProgress.UnlockStatus.TIER_TOO_LOW, "Niveau non vérifié");
-
-            // Chaîne de quêtes jusqu'au niveau pierre, sur des faits réels.
-            h.assertTrue(ProgressManager.claim(player, "decouverte").status() == PlayerProgress.ClaimStatus.NOT_READY, "Quête validée sans action");
-            ProgressManager.markOpened(player, false);
-            h.assertTrue(ProgressManager.claim(player, "decouverte").status() == PlayerProgress.ClaimStatus.OK, "Ouverture du cristal non comptée");
-            h.assertTrue(ProgressManager.claim(player, "decouverte").status() == PlayerProgress.ClaimStatus.ALREADY, "Récompense donnée deux fois");
-            ProgressManager.markOpened(player, true);
-            h.assertTrue(ProgressManager.claim(player, "catalogue").status() == PlayerProgress.ClaimStatus.OK, "Quête catalogue");
-            ProgressManager.onBuildCompleted(player.getUUID(), DefaultCatalog.shared().get("maison_bois"), null);
-            h.assertTrue(ProgressManager.claim(player, "premiere_maison").status() == PlayerProgress.ClaimStatus.OK, "Quête première maison");
-            h.assertTrue(ProgressManager.claim(player, "pierre").status() == PlayerProgress.ClaimStatus.NOT_READY, "Minage non vérifié");
-            player.awardStat(Stats.BLOCK_MINED.get(Blocks.STONE), 64);
-            h.assertTrue(ProgressManager.claim(player, "pierre").status() == PlayerProgress.ClaimStatus.OK, "Statistique de minage ignorée");
-            h.assertTrue(ProgressManager.get(player).tier() == Tier.PIERRE, "Niveau pierre non atteint");
-
-            // Matériaux insuffisants : rien n'est retiré.
-            player.getInventory().clearContent();
-            ItemCost first = rule.cost().get(0);
-            Item firstItem = BuiltInRegistries.ITEM.get(ResourceLocation.parse(first.item()));
-            give(player, firstItem, 1);
-            h.assertTrue(ProgressManager.unlock(player, locked.id()).status() == PlayerProgress.UnlockStatus.MISSING_MATERIALS, "Matériaux non vérifiés");
-            h.assertTrue(player.getInventory().countItem(firstItem) == 1, "Objets retirés malgré un refus");
-
-            // Coût exact + 10 : seul le coût est retiré, une seule fois.
-            player.getInventory().clearContent();
-            for (ItemCost c : rule.cost()) {
-                give(player, BuiltInRegistries.ITEM.get(ResourceLocation.parse(c.item())), c.count() + 10);
-            }
-            var ok = ProgressManager.unlock(player, locked.id());
-            h.assertTrue(ok.status() == PlayerProgress.UnlockStatus.OK, "Déblocage refusé : " + ok.message());
-            h.assertTrue(ProgressManager.unlock(player, locked.id()).status() == PlayerProgress.UnlockStatus.ALREADY, "Double déblocage");
-            for (ItemCost c : rule.cost()) {
-                int left = player.getInventory().countItem(BuiltInRegistries.ITEM.get(ResourceLocation.parse(c.item())));
-                h.assertTrue(left == 10, c.item() + " : il reste " + left + " au lieu de 10");
-            }
-            h.assertTrue(ProgressManager.canBuild(player, locked), "Construction toujours verrouillée après déblocage");
-
-            // Relecture depuis le fichier du monde.
-            ProgressManager.forget(player.getUUID());
-            PlayerProgress reloaded = ProgressManager.get(player);
-            h.assertTrue(reloaded.tier() == Tier.PIERRE, "Niveau perdu à la relecture");
-            h.assertTrue(reloaded.unlocked().contains(locked.id()), "Déblocage perdu à la relecture");
-            h.assertTrue(reloaded.claimed().contains("pierre"), "Quête perdue à la relecture");
-        } finally {
-            ServerConfig.PROGRESSION_MODE.set(before);
-        }
-        h.succeed();
     }
 
     private static void give(ServerPlayer player, Item item, int count) {

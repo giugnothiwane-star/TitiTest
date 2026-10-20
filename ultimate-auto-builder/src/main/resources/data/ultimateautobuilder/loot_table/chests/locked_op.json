@@ -1,0 +1,44 @@
+{
+ "type": "minecraft:chest",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:loot_table",
+     "value": "ultimateautobuilder:chests/op",
+     "weight": 1
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:netherite_pickaxe",
+     "weight": 1,
+     "functions": [
+      {
+       "function": "minecraft:set_enchantments",
+       "enchantments": {
+        "minecraft:efficiency": 30,
+        "minecraft:unbreaking": 3,
+        "minecraft:fortune": 3
+       }
+      },
+      {
+       "function": "minecraft:set_name",
+       "name": {
+        "text": "Pioche de l'Architecte",
+        "italic": false,
+        "color": "light_purple"
+       },
+       "target": "custom_name"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

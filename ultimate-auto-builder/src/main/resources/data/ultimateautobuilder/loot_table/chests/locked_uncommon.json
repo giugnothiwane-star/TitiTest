@@ -1,0 +1,25 @@
+{
+ "type": "minecraft:chest",
+ "pools": [
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:loot_table",
+     "value": "ultimateautobuilder:chests/rare",
+     "weight": 1
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "entries": [
+    {
+     "type": "minecraft:loot_table",
+     "value": "ultimateautobuilder:chests/uncommon",
+     "weight": 1
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "ultimateautobuilder:block/adventure_spawner"
+    }
+  }
+}
