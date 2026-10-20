@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "tier=common": {
+      "model": "ultimateautobuilder:block/vault_door_common"
+    },
+    "tier=uncommon": {
+      "model": "ultimateautobuilder:block/vault_door_uncommon"
+    },
+    "tier=rare": {
+      "model": "ultimateautobuilder:block/vault_door_rare"
+    },
+    "tier=legendary": {
+      "model": "ultimateautobuilder:block/vault_door_legendary"
+    },
+    "tier=op": {
+      "model": "ultimateautobuilder:block/vault_door_op"
+    }
+  }
+}

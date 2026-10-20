@@ -112,8 +112,20 @@ public final class ClientHooks {
         ClientState.onProgress(payload);
     }
 
-    public static void onProgress(com.ultimateautobuilder.network.ProgressPayload payload) {
-        ClientProgress.set(payload);
+    public static void onAdventure(com.ultimateautobuilder.network.AdventureStatePayload payload) {
+        ClientAdventure.set(payload);
+    }
+
+    public static void onRewardFx(com.ultimateautobuilder.network.RewardFxPayload payload) {
+        ClientAdventure.onRewardFx(payload);
+    }
+
+    /** Clic droit avec une carte au trésor. */
+    public static void openTreasureMap(net.minecraft.world.item.ItemStack stack) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && mc.screen == null) {
+            mc.setScreen(new com.ultimateautobuilder.client.gui.TreasureMapScreen(stack.copy()));
+        }
     }
 
     public static void onCustomPreview(SimplePayloads.CustomPreview payload) {

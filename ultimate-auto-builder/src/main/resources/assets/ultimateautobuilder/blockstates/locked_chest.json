@@ -1,0 +1,79 @@
+{
+  "variants": {
+    "facing=north,tier=common": {
+      "model": "ultimateautobuilder:block/locked_chest_common"
+    },
+    "facing=east,tier=common": {
+      "model": "ultimateautobuilder:block/locked_chest_common",
+      "y": 90
+    },
+    "facing=south,tier=common": {
+      "model": "ultimateautobuilder:block/locked_chest_common",
+      "y": 180
+    },
+    "facing=west,tier=common": {
+      "model": "ultimateautobuilder:block/locked_chest_common",
+      "y": 270
+    },
+    "facing=north,tier=uncommon": {
+      "model": "ultimateautobuilder:block/locked_chest_uncommon"
+    },
+    "facing=east,tier=uncommon": {
+      "model": "ultimateautobuilder:block/locked_chest_uncommon",
+      "y": 90
+    },
+    "facing=south,tier=uncommon": {
+      "model": "ultimateautobuilder:block/locked_chest_uncommon",
+      "y": 180
+    },
+    "facing=west,tier=uncommon": {
+      "model": "ultimateautobuilder:block/locked_chest_uncommon",
+      "y": 270
+    },
+    "facing=north,tier=rare": {
+      "model": "ultimateautobuilder:block/locked_chest_rare"
+    },
+    "facing=east,tier=rare": {
+      "model": "ultimateautobuilder:block/locked_chest_rare",
+      "y": 90
+    },
+    "facing=south,tier=rare": {
+      "model": "ultimateautobuilder:block/locked_chest_rare",
+      "y": 180
+    },
+    "facing=west,tier=rare": {
+      "model": "ultimateautobuilder:block/locked_chest_rare",
+      "y": 270
+    },
+    "facing=north,tier=legendary": {
+      "model": "ultimateautobuilder:block/locked_chest_legendary"
+    },
+    "facing=east,tier=legendary": {
+      "model": "ultimateautobuilder:block/locked_chest_legendary",
+      "y": 90
+    },
+    "facing=south,tier=legendary": {
+      "model": "ultimateautobuilder:block/locked_chest_legendary",
+      "y": 180
+    },
+    "facing=west,tier=legendary": {
+      "model": "ultimateautobuilder:block/locked_chest_legendary",
+      "y": 270
+    },
+    "facing=north,tier=op": {
+      "model": "ultimateautobuilder:block/locked_chest_op"
+    },
+    "facing=east,tier=op": {
+      "model": "ultimateautobuilder:block/locked_chest_op",
+      "y": 90
+    },
+    "facing=south,tier=op": {
+      "model": "ultimateautobuilder:block/locked_chest_op",
+      "y": 180
+    },
+    "facing=west,tier=op": {
+      "model": "ultimateautobuilder:block/locked_chest_op",
+      "y": 270
+    }
+  }
+}

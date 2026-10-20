@@ -35,6 +35,8 @@ public final class UltimateAutoBuilderMod {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public UltimateAutoBuilderMod(IEventBus modBus, ModContainer container) {
+        com.ultimateautobuilder.registry.ModBlocks.BLOCKS.register(modBus);
+        com.ultimateautobuilder.registry.ModBlocks.BLOCK_ENTITIES.register(modBus);
         ModItems.ITEMS.register(modBus);
         ModCreativeTabs.TABS.register(modBus);
         modBus.addListener(NetworkHandler::register);
@@ -43,17 +45,13 @@ public final class UltimateAutoBuilderMod {
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> UabCommand.register(e.getDispatcher()));
         NeoForge.EVENT_BUS.addListener((PermissionGatherEvent.Nodes e) -> Permissions.registerNodes(e));
         NeoForge.EVENT_BUS.addListener((ServerStartedEvent e) -> BuildManager.onServerStarted(e.getServer()));
-        NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
-            BuildManager.onServerStopping(e.getServer());
-            com.ultimateautobuilder.progression.ProgressManager.clear();
-        });
+        NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> BuildManager.onServerStopping(e.getServer()));
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Pre e) -> BuildManager.onServerTickPre(e.getServer()));
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post e) -> BuildManager.onServerTickPost(e.getServer()));
-        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent e) -> PlayerJoinHandler.onLogin(e.getEntity()));
+        com.ultimateautobuilder.adventure.AdventureEvents.register();
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent e) -> {
             PlayerJoinHandler.onLogout(e.getEntity());
             com.ultimateautobuilder.network.ModelUploads.forget(e.getEntity().getUUID());
-            com.ultimateautobuilder.progression.ProgressManager.forget(e.getEntity().getUUID());
         });
 
         // Le catalogue est purement calculatoire : son initialisation précoce évite un à-coup à la première ouverture.

@@ -58,9 +58,14 @@ public final class ServerConfig {
 
     public static final ModConfigSpec.IntValue PERMISSION_LEVEL;
     public static final ModConfigSpec.BooleanValue SINGLEPLAYER_ALWAYS_ALLOWED;
-    public static final ModConfigSpec.BooleanValue GIVE_CRYSTAL_ON_FIRST_JOIN;
 
-    public static final ModConfigSpec.EnumValue<ProgressionMode> PROGRESSION_MODE;
+    public static final ModConfigSpec.BooleanValue STARTER_KIT;
+    public static final ModConfigSpec.BooleanValue STARTER_HOUSE;
+    public static final ModConfigSpec.BooleanValue WORLD_STRUCTURES;
+    public static final ModConfigSpec.IntValue HOUSE_SPACING;
+    public static final ModConfigSpec.IntValue CASTLE_SPACING;
+    public static final ModConfigSpec.IntValue SPAWNER_MAX_CYCLES;
+    public static final ModConfigSpec.IntValue STRUCTURE_BUDGET_MS;
     public static final ModConfigSpec.IntValue HISTORY_SIZE;
     public static final ModConfigSpec.BooleanValue UNDO_PRUDENT;
     public static final ModConfigSpec.IntValue CHECKPOINT_SECONDS;
@@ -90,7 +95,8 @@ public final class ServerConfig {
         b.pop();
 
         b.comment("Règles de construction").push("building");
-        FREE_BUILD = b.comment("Construction gratuite : aucun matériau n'est retiré de l'inventaire").define("freeBuild", true);
+        FREE_BUILD = b.comment("Construction gratuite du constructeur : aucun matériau n'est retiré de l'inventaire. Par défaut non :"
+                + " en survie, les blocs viennent de l'inventaire (rien n'est retiré en créatif)").define("freeBuild", false);
         REPLACE_EXISTING = b.comment("Remplacer les blocs existants (sinon seuls l'air et les blocs remplaçables le sont)")
                 .define("replaceExisting", true);
         PROTECT_VALUABLE = b.define("protectValuableBlocks", true);
@@ -113,12 +119,20 @@ public final class ServerConfig {
         b.comment("Permissions").push("permissions");
         PERMISSION_LEVEL = b.comment("Niveau d'opérateur requis pour construire (0 = tout le monde)").defineInRange("permissionLevel", 2, 0, 4);
         SINGLEPLAYER_ALWAYS_ALLOWED = b.define("singleplayerAlwaysAllowed", true);
-        GIVE_CRYSTAL_ON_FIRST_JOIN = b.define("giveCrystalOnFirstJoin", true);
         b.pop();
 
-        b.comment("Progression : niveaux d'architecte, quêtes et déblocage des constructions par matériaux").push("progression");
-        PROGRESSION_MODE = b.comment("CREATIVE_FREE : progression en survie, tout est accessible en créatif ; ALWAYS : progression pour tous ; "
-                + "OFF : toutes les constructions sont accessibles").defineEnum("progressionMode", ProgressionMode.CREATIVE_FREE);
+        b.comment("Aventure : kit de départ, structures d'exploration, spawners de châteaux").push("adventure");
+        STARTER_KIT = b.comment("Kit de départ (outils en bois, 32 bois, 32 pierres, établi, Ultimate Crystal) donné une seule fois aux"
+                + " nouveaux joueurs").define("starterKit", true);
+        STARTER_HOUSE = b.comment("Maison de départ en bois construite près des nouveaux joueurs (jamais sur des constructions existantes)")
+                .define("starterHouse", true);
+        WORLD_STRUCTURES = b.comment("Maisons, ruines, châteaux et sanctuaire OP générés dans les nouveaux chunks de l'Overworld")
+                .define("worldStructures", true);
+        HOUSE_SPACING = b.comment("Taille (en chunks) de la grille des maisons : une maison au plus par case").defineInRange("houseSpacingChunks", 14, 6, 128);
+        CASTLE_SPACING = b.comment("Taille (en chunks) de la grille des châteaux").defineInRange("castleSpacingChunks", 36, 12, 256);
+        SPAWNER_MAX_CYCLES = b.comment("Cycles de 4 créatures avant épuisement d'un spawner de château").defineInRange("spawnerMaxCycles", 3, 1, 50);
+        STRUCTURE_BUDGET_MS = b.comment("Temps maximal par tick consacré à la pose des structures générées (ms)")
+                .defineInRange("structureBudgetMs", 4, 1, 20);
         b.pop();
 
         b.comment("Historique et annulation").push("history");
@@ -132,9 +146,6 @@ public final class ServerConfig {
 
     private ServerConfig() {
     }
-
-    /** Application de la progression. */
-    public enum ProgressionMode { CREATIVE_FREE, ALWAYS, OFF }
 
     public static boolean loaded() {
         return SPEC.isLoaded();
@@ -181,7 +192,10 @@ public final class ServerConfig {
         m.put("hollowLargeStatues", HOLLOW_STATUES);
         m.put("aerialHeight", AERIAL_HEIGHT);
         m.put("restrictToSelection", RESTRICT_TO_SELECTION);
-        m.put("progressionMode", PROGRESSION_MODE);
+        m.put("starterKit", STARTER_KIT);
+        m.put("starterHouse", STARTER_HOUSE);
+        m.put("worldStructures", WORLD_STRUCTURES);
+        m.put("spawnerMaxCycles", SPAWNER_MAX_CYCLES);
         m.put("historySize", HISTORY_SIZE);
         m.put("prudentUndo", UNDO_PRUDENT);
         return m;

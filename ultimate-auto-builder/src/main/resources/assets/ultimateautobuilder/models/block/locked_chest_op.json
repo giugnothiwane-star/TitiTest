@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "ultimateautobuilder:block/locked_chest_front_op",
+    "side": "ultimateautobuilder:block/locked_chest_side",
+    "top": "ultimateautobuilder:block/locked_chest_top"
+  }
+}

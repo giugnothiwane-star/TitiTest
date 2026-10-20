@@ -1,0 +1,279 @@
+{
+ "type": "minecraft:chest",
+ "pools": [
+  {
+   "rolls": {
+    "type": "minecraft:uniform",
+    "min": 4,
+    "max": 7
+   },
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:stone_pickaxe",
+     "weight": 5
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:iron_pickaxe",
+     "weight": 4
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:iron_axe",
+     "weight": 4
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:iron_sword",
+     "weight": 4
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:iron_shovel",
+     "weight": 3
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:iron_ingot",
+     "weight": 10,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 2,
+        "max": 6
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:gold_ingot",
+     "weight": 6,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 1,
+        "max": 4
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:iron_helmet",
+     "weight": 3
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:iron_chestplate",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:iron_leggings",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:iron_boots",
+     "weight": 3
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:golden_chestplate",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:golden_leggings",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:chainmail_chestplate",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:chainmail_leggings",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:bread",
+     "weight": 8,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 3,
+        "max": 8
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:cooked_porkchop",
+     "weight": 6,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 2,
+        "max": 5
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:coal",
+     "weight": 8,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 4,
+        "max": 12
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:emerald",
+     "weight": 4,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 1,
+        "max": 3
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:bucket",
+     "weight": 3
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:shield",
+     "weight": 3
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:lantern",
+     "weight": 4,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 1,
+        "max": 3
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:book",
+     "weight": 4,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 1,
+        "max": 3
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "conditions": [
+    {
+     "condition": "minecraft:random_chance",
+     "chance": 0.2
+    }
+   ],
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "ultimateautobuilder:common_key",
+     "weight": 1
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "conditions": [
+    {
+     "condition": "minecraft:random_chance",
+     "chance": 0.12
+    }
+   ],
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "ultimateautobuilder:uncommon_key",
+     "weight": 1
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "conditions": [
+    {
+     "condition": "minecraft:random_chance",
+     "chance": 0.04
+    }
+   ],
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "ultimateautobuilder:rare_key",
+     "weight": 1
+    }
+   ]
+  },
+  {
+   "rolls": 1,
+   "conditions": [
+    {
+     "condition": "minecraft:random_chance",
+     "chance": 0.15
+    }
+   ],
+   "entries": [
+    {
+     "type": "minecraft:item",
+     "name": "ultimateautobuilder:treasure_map",
+     "weight": 1,
+     "functions": [
+      {
+       "function": "minecraft:set_custom_data",
+       "tag": "{uab_treasure_tier:\"uncommon\"}"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
